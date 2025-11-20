@@ -1,74 +1,9 @@
-import axios from 'axios';
-
 /**
- * Fetch Halacha Yomit from Hebcal API
- * Using Mishna Yomi as a source for daily learning content
- * @returns {Promise} Daily Halacha/Learning content
+ * Get Daily Halacha - Always returns curated halachot
+ * Rotates based on day of month for variety
+ * @returns {Object} Daily Halacha with text and category
  */
 export const getDailyHalacha = async () => {
-  try {
-    // Use Hebcal's calendar API which includes daily learning
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-
-    const response = await axios.get('https://www.hebcal.com/hebcal', {
-      params: {
-        cfg: 'json',
-        year: year,
-        month: month,
-        v: 1,
-        maj: 'on',
-        min: 'on',
-        nx: 'on',
-        mf: 'on',
-        ss: 'on',
-        mod: 'ashkenazi',
-        s: 'on', // Sedrot
-        i: 'on', // Israeli holidays
-        lg: 'he', // Hebrew
-        d: 'on', // Daf Yomi
-        F: 'on', // Yerushalmi Yomi
-      },
-    });
-
-    // Get today's items
-    const todayStr = `${year}-${month}-${day}`;
-    const todayItems = response.data.items?.filter(
-      (item) => item.date?.startsWith(todayStr)
-    ) || [];
-
-    // Find learning content (Daf Yomi, Mishna, etc.)
-    const learningContent = todayItems.filter(
-      (item) =>
-        item.category === 'dafyomi' ||
-        item.category === 'mishna' ||
-        item.category === 'yerushalmi'
-    );
-
-    // If we have learning content, format it as halacha
-    if (learningContent.length > 0) {
-      return {
-        text: learningContent.map((item) => item.hebrew || item.title).join(' • '),
-        category: 'לימוד יומי',
-        source: 'hebcal',
-      };
-    }
-
-    // Fallback to a curated list of short halachot
-    return getFallbackHalacha();
-  } catch (error) {
-    console.error('Failed to fetch daily halacha:', error);
-    return getFallbackHalacha();
-  }
-};
-
-/**
- * Fallback halachot when API is unavailable
- * Returns a rotating halacha based on day of month
- */
-const getFallbackHalacha = () => {
   const halachot = [
     {
       text: 'יש להקדים תפילת מנחה לתפילת ערבית, ולא להתפלל ערבית קודם למנחה.',
