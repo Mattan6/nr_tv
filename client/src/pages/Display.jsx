@@ -1,6 +1,7 @@
 import Clock from '../components/Clock/Clock';
 import HebrewDate from '../components/HebrewDate/HebrewDate';
 import PrayerTimes from '../components/PrayerTimes/PrayerTimes';
+import ShabbatTimes from '../components/ShabbatTimes/ShabbatTimes';
 import ParashaWeek from '../components/ParashaWeek/ParashaWeek';
 import DafYomi from '../components/DafYomi/DafYomi';
 import OmerCount from '../components/OmerCount/OmerCount';
@@ -25,8 +26,9 @@ const Display = () => {
       {/* Main Grid Layout */}
       <div className="grid grid-cols-3 gap-6">
         {/* Left Column - Prayer Times */}
-        <div className="col-span-2">
+        <div className="col-span-2 space-y-6">
           <PrayerTimes />
+          <ShabbatTimes />
         </div>
 
         {/* Right Column - Parasha and Special Info */}
