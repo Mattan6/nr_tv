@@ -9,9 +9,15 @@ const DailyHalacha = () => {
     const fetchHalacha = async () => {
       try {
         const data = await getDailyHalacha();
+        console.log('Fetched halacha:', data); // Debug log
         setHalacha(data);
       } catch (error) {
         console.error('Failed to fetch daily halacha:', error);
+        // Set a default halacha on error
+        setHalacha({
+          text: 'יש להקדים תפילת מנחה לתפילת ערבית, ולא להתפלל ערבית קודם למנחה.',
+          category: 'תפילה',
+        });
       } finally {
         setLoading(false);
       }
@@ -36,7 +42,13 @@ const DailyHalacha = () => {
   }
 
   if (!halacha) {
-    return null;
+    return (
+      <div className="bg-gradient-to-r from-primary-gold to-yellow-600 p-6 rounded-lg shadow-lg">
+        <div className="text-center text-primary-dark font-hebrew">
+          שגיאה בטעינת הלכה יומית
+        </div>
+      </div>
+    );
   }
 
   // Limit text to approximately 5 lines (around 250 characters)
