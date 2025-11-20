@@ -1,19 +1,49 @@
 import { useState, useEffect } from 'react';
-import { halachot } from './halachaData';
+import { getDailyHalacha } from '../../services/halacha';
 
 const DailyHalacha = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [halacha, setHalacha] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Change halacha every 30 seconds
-    const timer = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % halachot.length);
-    }, 30000); // 30 seconds
+    const fetchHalacha = async () => {
+      try {
+        const data = await getDailyHalacha();
+        setHalacha(data);
+      } catch (error) {
+        console.error('Failed to fetch daily halacha:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return () => clearInterval(timer);
+    fetchHalacha();
+
+    // Refresh halacha every 30 seconds to get new content
+    const interval = setInterval(fetchHalacha, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  const currentHalacha = halachot[currentIndex];
+  if (loading) {
+    return (
+      <div className="bg-gradient-to-r from-primary-gold to-yellow-600 p-6 rounded-lg shadow-lg">
+        <div className="text-center text-primary-dark font-hebrew">
+          טוען הלכה יומית...
+        </div>
+      </div>
+    );
+  }
+
+  if (!halacha) {
+    return null;
+  }
+
+  // Limit text to approximately 5 lines (around 250 characters)
+  const truncateText = (text, maxLength = 250) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength).trim() + '...';
+  };
 
   return (
     <div className="bg-gradient-to-r from-primary-gold to-yellow-600 p-6 rounded-lg shadow-lg animate-fadeIn">
@@ -28,43 +58,14 @@ const DailyHalacha = () => {
               הלכה יומית
             </h3>
             <span className="text-sm bg-white bg-opacity-30 px-3 py-1 rounded-full text-primary-dark font-hebrew">
-              {currentHalacha.category}
+              {halacha.category}
             </span>
           </div>
 
           <p className="text-xl leading-relaxed text-primary-dark font-hebrew font-medium">
-            {currentHalacha.text}
+            {truncateText(halacha.text)}
           </p>
-
-          {/* Progress indicator */}
-          <div className="mt-4 flex items-center gap-2">
-            <div className="flex-grow h-1 bg-white bg-opacity-30 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary-dark transition-all duration-500"
-                style={{
-                  width: `${((currentIndex + 1) / halachot.length) * 100}%`,
-                }}
-              />
-            </div>
-            <span className="text-sm text-primary-dark font-hebrew">
-              {currentIndex + 1}/{halachot.length}
-            </span>
-          </div>
         </div>
-      </div>
-
-      {/* Navigation dots */}
-      <div className="flex justify-center gap-1 mt-4">
-        {halachot.slice(0, 10).map((_, index) => (
-          <div
-            key={index}
-            className={`w-2 h-2 rounded-full transition-all ${
-              index === currentIndex % 10
-                ? 'bg-primary-dark w-4'
-                : 'bg-white bg-opacity-40'
-            }`}
-          />
-        ))}
       </div>
     </div>
   );
