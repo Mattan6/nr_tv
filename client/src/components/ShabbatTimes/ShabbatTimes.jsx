@@ -126,13 +126,10 @@ const ShabbatTimes = () => {
           {/* Friday Night */}
           <div className="bg-white bg-opacity-10 p-3 rounded-lg">
             <div className="text-primary-gold font-hebrew text-sm mb-1">
-              מנחה וקבלת שבת
+              מנחה ערב שבת
             </div>
             <div className="text-2xl font-bold text-white">
               {calculateMinchaTime(shabbatData.candleLighting?.date)}
-            </div>
-            <div className="text-xs text-gray-400 font-hebrew">
-              5 דקות אחרי כניסת שבת
             </div>
           </div>
 

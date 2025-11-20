@@ -6,6 +6,7 @@ import ParashaWeek from '../components/ParashaWeek/ParashaWeek';
 import DafYomi from '../components/DafYomi/DafYomi';
 import OmerCount from '../components/OmerCount/OmerCount';
 import SpecialDays from '../components/SpecialDays/SpecialDays';
+import DailyHalacha from '../components/DailyHalacha/DailyHalacha';
 import Announcements from '../components/Announcements/Announcements';
 import Events from '../components/Events/Events';
 
@@ -38,6 +39,11 @@ const Display = () => {
           <OmerCount />
           <SpecialDays />
         </div>
+      </div>
+
+      {/* Daily Halacha Section */}
+      <div className="mt-6">
+        <DailyHalacha />
       </div>
 
       {/* Bottom Section - Announcements and Events */}
