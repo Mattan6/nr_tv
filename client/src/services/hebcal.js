@@ -2,10 +2,11 @@ import axios from 'axios';
 
 const HEBCAL_API_URL = import.meta.env.VITE_HEBCAL_API_URL || 'https://www.hebcal.com';
 
-// Nitzan coordinates
+// Nitzan, Israel - accurate coordinates
+// Located south of Ashdod, near the coast
 const LOCATION = {
-  latitude: 31.7575,
-  longitude: 34.5569,
+  latitude: 31.7167,
+  longitude: 34.6333,
   tzid: 'Asia/Jerusalem',
   city: 'Nitzan',
 };
