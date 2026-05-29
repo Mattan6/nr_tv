@@ -1,59 +1,60 @@
+import { useState, useEffect } from 'react';
 import Clock from '../components/Clock/Clock';
 import HebrewDate from '../components/HebrewDate/HebrewDate';
 import PrayerTimes from '../components/PrayerTimes/PrayerTimes';
 import ShabbatTimes from '../components/ShabbatTimes/ShabbatTimes';
-import ParashaWeek from '../components/ParashaWeek/ParashaWeek';
-import DafYomi from '../components/DafYomi/DafYomi';
-import OmerCount from '../components/OmerCount/OmerCount';
 import SpecialDays from '../components/SpecialDays/SpecialDays';
-import DailyHalacha from '../components/DailyHalacha/DailyHalacha';
-import Announcements from '../components/Announcements/Announcements';
-import Events from '../components/Events/Events';
+
+const SLIDE_DURATION = 15000;
+const FADE_MS = 800;
+
+const SharedHeader = () => (
+  <div className="mb-3 text-center w-full max-w-5xl" dir="rtl">
+    <h1
+      className="font-bold mb-2 text-primary-lightGold font-hebrew"
+      style={{ fontSize: '2.6rem', letterSpacing: '0.05em', textShadow: '0 2px 16px rgba(0,0,0,0.7)' }}
+    >
+      בית הכנסת נווה רחמים
+    </h1>
+    <Clock />
+    <div className="mt-2">
+      <HebrewDate />
+    </div>
+    <div className="mt-2">
+      <SpecialDays />
+    </div>
+  </div>
+);
 
 const Display = () => {
+  const [slideIndex, setSlideIndex] = useState(0);
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFading(true);
+      setTimeout(() => {
+        setSlideIndex((prev) => (prev + 1) % 2);
+        setFading(false);
+      }, FADE_MS);
+    }, SLIDE_DURATION);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="min-h-screen p-8">
-      {/* Header with Clock and Hebrew Date */}
-      <div className="mb-8 text-center">
-        <h1 className="text-5xl font-bold mb-4 text-primary-lightGold font-hebrew">
-          בית הכנסת ניצן
-        </h1>
-        <Clock />
-        <div className="mt-4">
-          <HebrewDate />
-        </div>
+    <div
+      className="min-h-screen p-5 flex flex-col items-center justify-start"
+      dir="ltr"
+      style={{
+        opacity: fading ? 0 : 1,
+        transition: `opacity ${FADE_MS}ms ease-in-out`,
+      }}
+    >
+      <SharedHeader />
+      <div className="w-full max-w-7xl" dir="rtl">
+        {slideIndex === 0 ? <PrayerTimes /> : <ShabbatTimes />}
       </div>
-
-      {/* Main Grid Layout */}
-      <div className="grid grid-cols-3 gap-6">
-        {/* Left Column - Prayer Times */}
-        <div className="col-span-2 space-y-6">
-          <PrayerTimes />
-          <ShabbatTimes />
-        </div>
-
-        {/* Right Column - Parasha and Special Info */}
-        <div className="space-y-6">
-          <ParashaWeek />
-          <DafYomi />
-          <OmerCount />
-          <SpecialDays />
-        </div>
-      </div>
-
-      {/* Daily Halacha Section */}
-      <div className="mt-6">
-        <DailyHalacha />
-      </div>
-
-      {/* Bottom Section - Announcements and Events */}
-      <div className="grid grid-cols-2 gap-6 mt-6">
-        <Announcements />
-        <Events />
-      </div>
-
-      {/* Footer */}
-      <div className="text-center mt-8 text-gray-400 text-sm">
+      <div className="text-center mt-3 text-gray-400 text-sm" dir="rtl">
         <div className="flex items-center justify-center gap-2">
           <span>נוסח עדות המזרח</span>
           <span>•</span>

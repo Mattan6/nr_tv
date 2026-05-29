@@ -14,10 +14,13 @@ const Clock = () => {
 
   return (
     <div className="text-center">
-      <div className="text-8xl font-bold font-english text-primary-lightGold mb-2">
+      <div
+        className="font-bold font-english text-primary-lightGold mb-1"
+        style={{ fontSize: '3.5rem', lineHeight: 1 }}
+      >
         {format(time, 'HH:mm:ss')}
       </div>
-      <div className="text-2xl text-gray-300 font-hebrew">
+      <div className="text-lg text-gray-300 font-hebrew">
         {format(time, 'EEEE, dd MMMM yyyy')}
       </div>
     </div>
