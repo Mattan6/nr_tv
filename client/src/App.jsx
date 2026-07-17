@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Display from './pages/Display';
+import Zmanim from './pages/Zmanim';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,6 +19,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Display />} />
+          <Route path="/zmanim" element={<Zmanim />} />
           {/* Admin routes will be added here */}
         </Routes>
       </Router>
