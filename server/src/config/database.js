@@ -9,8 +9,8 @@ const connectDB = async () => {
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error(`Error: ${error.message}`);
-    process.exit(1);
+    console.warn(`⚠️  MongoDB not connected: ${error.message}`);
+    console.warn('Server will keep running without a database. Admin/announcements/events features are unavailable until a valid MONGODB_URI is set in server/.env.');
   }
 };
 
