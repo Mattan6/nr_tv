@@ -1,15 +1,22 @@
 // Static, editable content for the synagogue display dashboard.
 // (Prayer schedule, shiurim, announcements, mazal tov, azkarot, parnas, ticker.)
 // The zmanim panel is wired to live Hebcal data — see ZMANIM_ROWS below.
+import { format } from 'date-fns';
 
+// Weekday (חול) prayers. Each entry is one of:
+//   { time: 'HH:MM' }                     — a fixed clock time
+//   { from: '<zmanim field>', offsetMin } — derived from TODAY's zmanim
+//                                           (e.g. sunrise = הנץ)
+//   { computed: '<key>' }                 — a value the container computes and
+//                                           passes to resolvePrayers (e.g. the
+//                                           weekly מנחה time)
+//   { text, afterName }                   — literal text shown instead of a
+//                                           time; the countdown follows afterName
 export const WEEKDAY_PRAYERS = [
-  { name: 'שחרית · הנץ', time: '05:45' },
-  { name: "שחרית א'", time: '06:15' },
-  { name: "שחרית ב'", time: '07:00' },
-  { name: 'מנחה גדולה', time: '13:00' },
-  { name: 'מנחה', time: '18:35' },
-  { name: "ערבית א'", time: '19:20' },
-  { name: "ערבית ב'", time: '20:45' },
+  { name: 'שחרית מניין א׳ (הנץ)', from: 'sunrise' },
+  { name: 'שחרית מניין ב׳', time: '08:15' },
+  { name: 'מנחה', computed: 'mincha' },
+  { name: 'ערבית', text: 'מיד לאחר מנחה', afterName: 'מנחה' },
 ];
 
 export const SHABBAT_PRAYERS = [
@@ -72,14 +79,69 @@ export const PARNAS = {
 export const TICKER =
   'בית כנסת נווה רחמים  •  נא לכבד את קדושת בית הכנסת ולכבות את הטלפונים  •  נדבת משפחת בן חמו לעילוי נשמת משה בן פרטונה  •  לתרומות והנצחות פנו לגבאי · 054-848-7595  •  ';
 
-// Finds the next prayer after `now` from `list` and returns its name, time,
-// and an HH:MM:SS countdown. If none remain today, rolls to the first tomorrow.
+// Resolves prayer entries against today's zmanim into { name, time, clock }.
+// `time` is what to display (may be text like "מיד לאחר מנחה"); `clock` is the
+// 'HH:MM' used for ordering / countdown (null when there is no real time yet).
+function toClock(iso, offsetMin) {
+  if (!iso) return null;
+  try {
+    const d = new Date(iso);
+    if (offsetMin) d.setMinutes(d.getMinutes() + offsetMin);
+    return format(d, 'HH:mm');
+  } catch {
+    return null;
+  }
+}
+
+export function resolvePrayers(entries, zmanimTimes, computed = {}) {
+  const base = entries.map((e) => {
+    let clock = null;
+    if (e.time) clock = e.time;
+    else if (e.computed) clock = computed[e.computed] || null;
+    else if (e.from) clock = zmanimTimes ? toClock(zmanimTimes[e.from], e.offsetMin) : null;
+    return { ...e, clock };
+  });
+  // Entries anchored to another prayer (afterName) inherit its clock for the
+  // countdown, while still showing their own text.
+  return base.map((e) => {
+    let clock = e.clock;
+    if (e.afterName) {
+      const ref = base.find((x) => x.name === e.afterName);
+      clock = ref ? ref.clock : null;
+    }
+    return { name: e.name, time: e.text || clock || '--:--', clock };
+  });
+}
+
+// The Thursday whose sunset governs this week's מנחה. מנחה is refreshed each
+// Friday for the week ending on the following Thursday, so from any day we look
+// forward to that week's Thursday. (Weekday מנחה isn't shown Fri/Sat anyway.)
+export function governingThursday(now) {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  const daysSinceFriday = (d.getDay() - 5 + 7) % 7; // Fri = 5
+  const friday = new Date(d);
+  friday.setDate(d.getDate() - daysSinceFriday);
+  const thursday = new Date(friday);
+  thursday.setDate(friday.getDate() + 6);
+  return thursday;
+}
+
+// מנחה = the governing Thursday's sunset minus 20 minutes, fixed for the week.
+export function weeklyMinchaTime(thursdaySunsetIso) {
+  return toClock(thursdaySunsetIso, -20);
+}
+
+// Finds the next prayer after `now` from a resolved `list` (uses each entry's
+// `clock`) and returns its name, clock time, and an HH:MM:SS countdown. If none
+// remain today, rolls to the first one tomorrow.
 export function computeNextMinyan(now, list) {
-  if (!list.length) return { name: '', time: '', countdown: '--:--:--' };
+  const timed = list.filter((it) => it.clock);
+  if (!timed.length) return { name: '', time: '', countdown: '--:--:--' };
   const mins = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
   let target = null;
-  for (const it of list) {
-    const [h, m] = it.time.split(':').map(Number);
+  for (const it of timed) {
+    const [h, m] = it.clock.split(':').map(Number);
     if (h * 60 + m > mins) {
       target = it;
       break;
@@ -87,16 +149,16 @@ export function computeNextMinyan(now, list) {
   }
   const base = new Date(now);
   if (target) {
-    const [h, m] = target.time.split(':').map(Number);
+    const [h, m] = target.clock.split(':').map(Number);
     base.setHours(h, m, 0, 0);
   } else {
-    target = list[0];
-    const [h, m] = target.time.split(':').map(Number);
+    target = timed[0];
+    const [h, m] = target.clock.split(':').map(Number);
     base.setDate(base.getDate() + 1);
     base.setHours(h, m, 0, 0);
   }
   const diff = Math.max(0, Math.floor((base - now) / 1000));
   const pad = (n) => String(n).padStart(2, '0');
   const countdown = `${pad(Math.floor(diff / 3600))}:${pad(Math.floor((diff % 3600) / 60))}:${pad(diff % 60)}`;
-  return { name: target.name, time: target.time, countdown };
+  return { name: target.name, time: target.clock, countdown };
 }

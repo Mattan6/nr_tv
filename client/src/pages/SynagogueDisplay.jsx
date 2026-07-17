@@ -11,7 +11,10 @@ import {
   AZKAROT,
   PARNAS,
   TICKER,
+  resolvePrayers,
   computeNextMinyan,
+  governingThursday,
+  weeklyMinchaTime,
 } from '../components/display/displayData';
 import TopBar from '../components/display/TopBar';
 import PrayerTimesPanel from '../components/display/PrayerTimesPanel';
@@ -36,6 +39,7 @@ const SynagogueDisplay = () => {
   const [mazIdx, setMazIdx] = useState(0);
   const [azkIdx, setAzkIdx] = useState(0);
   const [zmanimTimes, setZmanimTimes] = useState(null);
+  const [minchaTime, setMinchaTime] = useState(null);
   const [parasha, setParasha] = useState('');
 
   // Scale the fixed 1920x1080 canvas to fit the screen.
@@ -67,9 +71,15 @@ const SynagogueDisplay = () => {
     let cancelled = false;
     const load = async () => {
       try {
-        const [z, p] = await Promise.all([getZmanim(new Date()), getParasha()]);
+        const today = new Date();
+        const [z, zThu, p] = await Promise.all([
+          getZmanim(today),
+          getZmanim(governingThursday(today)),
+          getParasha(),
+        ]);
         if (cancelled) return;
         setZmanimTimes(z.times || null);
+        setMinchaTime(weeklyMinchaTime(zThu?.times?.sunset));
         const parashaItem = p.items?.find((it) => it.category === 'parashat');
         setParasha(parashaItem?.hebrew || '');
       } catch (error) {
@@ -97,7 +107,7 @@ const SynagogueDisplay = () => {
   }
 
   const isShab = screen === 'shabbat';
-  const prayers = isShab ? SHABBAT_PRAYERS : WEEKDAY_PRAYERS;
+  const prayers = resolvePrayers(isShab ? SHABBAT_PRAYERS : WEEKDAY_PRAYERS, zmanimTimes, { mincha: minchaTime });
   const prayersTitle = isShab ? 'זמני תפילות · שבת' : 'זמני תפילות · חול';
   const prayersSub = isShab ? parasha || 'שבת קודש' : weekday;
   const next = computeNextMinyan(now, prayers);
