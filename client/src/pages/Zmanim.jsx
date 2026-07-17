@@ -28,6 +28,7 @@ const Zmanim = () => {
     let cancelled = false;
     const fetchAll = async () => {
       setStatus('loading');
+      setHebrewDate('');
       try {
         const [z, h] = await Promise.all([
           getZmanim(selectedDate),
@@ -115,7 +116,7 @@ const Zmanim = () => {
         </div>
 
         {/* Selected-date heading */}
-        <div className="text-center mb-4 font-hebrew" dir="rtl">
+        <div className="text-center mb-4 font-hebrew">
           <div className="text-2xl font-bold" style={{ color: '#FFD700' }}>{weekday}</div>
           <div className="text-lg tabular-nums" style={{ color: '#D4AF37' }}>{gregorian}</div>
           {hebrewDate && (
@@ -135,7 +136,6 @@ const Zmanim = () => {
           </div>
         )}
         {status === 'ready' && zmanim && <ZmanimCard zmanim={zmanim} />}
-
       </div>
     </div>
   );
