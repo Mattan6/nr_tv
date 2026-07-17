@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Clock from '../components/Clock/Clock';
 import HebrewDate from '../components/HebrewDate/HebrewDate';
+import ParashaHeader from '../components/ParashaHeader/ParashaHeader';
 import PrayerTimes from '../components/PrayerTimes/PrayerTimes';
 import ShabbatTimes from '../components/ShabbatTimes/ShabbatTimes';
 import SpecialDays from '../components/SpecialDays/SpecialDays';
@@ -19,6 +20,9 @@ const SharedHeader = () => (
     <Clock />
     <div className="mt-2">
       <HebrewDate />
+    </div>
+    <div className="mt-2">
+      <ParashaHeader />
     </div>
     <div className="mt-2">
       <SpecialDays />
