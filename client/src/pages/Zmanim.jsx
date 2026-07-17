@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { addDays, format } from 'date-fns';
+import { getZmanim, getHebrewDate } from '../services/hebcal';
+import ZmanimCard from '../components/PrayerTimes/ZmanimCard';
 
 const HEBREW_WEEKDAYS = [
   'יום ראשון', 'יום שני', 'יום שלישי', 'יום רביעי', 'יום חמישי', 'יום שישי', 'שבת',
@@ -18,6 +20,34 @@ const controlStyle = {
 
 const Zmanim = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [zmanim, setZmanim] = useState(null);
+  const [hebrewDate, setHebrewDate] = useState('');
+  const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchAll = async () => {
+      setStatus('loading');
+      try {
+        const [z, h] = await Promise.all([
+          getZmanim(selectedDate),
+          getHebrewDate(selectedDate),
+        ]);
+        if (cancelled) return;
+        setZmanim(z.times);
+        setHebrewDate(h.hebrew || '');
+        setStatus('ready');
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Failed to fetch zmanim for date:', error);
+        setStatus('error');
+      }
+    };
+    fetchAll();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDate]);
 
   const goToPrevDay = () => setSelectedDate((d) => addDays(d, -1));
   const goToNextDay = () => setSelectedDate((d) => addDays(d, 1));
@@ -36,7 +66,7 @@ const Zmanim = () => {
   const isToday = isSameDay(selectedDate, new Date());
 
   return (
-    <div className="min-h-screen p-5 flex flex-col items-center" dir="rtl">
+    <div className="h-screen overflow-y-auto p-5 flex flex-col items-center" dir="rtl">
       <div className="w-full max-w-7xl">
 
         {/* Date controls */}
@@ -57,6 +87,7 @@ const Zmanim = () => {
             type="date"
             value={inputValue}
             onChange={onDateInputChange}
+            aria-label="בחר תאריך"
             className="rounded-lg px-4 py-2 text-lg font-hebrew tabular-nums"
             style={controlStyle}
           />
@@ -87,7 +118,23 @@ const Zmanim = () => {
         <div className="text-center mb-4 font-hebrew" dir="rtl">
           <div className="text-2xl font-bold" style={{ color: '#FFD700' }}>{weekday}</div>
           <div className="text-lg tabular-nums" style={{ color: '#D4AF37' }}>{gregorian}</div>
+          {hebrewDate && (
+            <div className="text-xl mt-1" style={{ color: '#D4AF37' }}>{hebrewDate}</div>
+          )}
         </div>
+
+        {/* Zmanim card / states */}
+        {status === 'loading' && (
+          <div className="decorative-border">
+            <div className="text-center text-gray-400 font-hebrew text-2xl py-8">טוען זמני תפילות...</div>
+          </div>
+        )}
+        {status === 'error' && (
+          <div className="decorative-border">
+            <div className="text-center text-gray-400 font-hebrew text-2xl py-8">לא ניתן לטעון זמני תפילות</div>
+          </div>
+        )}
+        {status === 'ready' && zmanim && <ZmanimCard zmanim={zmanim} />}
 
       </div>
     </div>
