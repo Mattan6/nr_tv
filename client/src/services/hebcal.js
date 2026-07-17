@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { format } from 'date-fns';
 
 const HEBCAL_API_URL = import.meta.env.VITE_HEBCAL_API_URL || 'https://www.hebcal.com';
 
@@ -12,19 +13,19 @@ const LOCATION = {
 };
 
 /**
- * Get Zmanim (prayer times) for today
+ * Get Zmanim (prayer times) for a given date (defaults to today).
+ * @param {Date} [date] - The date to fetch zmanim for. Defaults to today.
  * @returns {Promise} Prayer times including sunrise, sunset, and all zmanim
  */
-export const getZmanim = async () => {
+export const getZmanim = async (date = new Date()) => {
   try {
-    const today = new Date();
     const response = await axios.get(`${HEBCAL_API_URL}/zmanim`, {
       params: {
         cfg: 'json',
         latitude: LOCATION.latitude,
         longitude: LOCATION.longitude,
         tzid: LOCATION.tzid,
-        date: today.toISOString().split('T')[0],
+        date: format(date, 'yyyy-MM-dd'),
       },
     });
     return response.data;
@@ -35,18 +36,18 @@ export const getZmanim = async () => {
 };
 
 /**
- * Get Hebrew date for today
- * @returns {Promise} Hebrew date information
+ * Get Hebrew date for a given date (defaults to today).
+ * @param {Date} [date] - The date to convert. Defaults to today.
+ * @returns {Promise} Hebrew date information (including a `hebrew` string field)
  */
-export const getHebrewDate = async () => {
+export const getHebrewDate = async (date = new Date()) => {
   try {
-    const today = new Date();
     const response = await axios.get(`${HEBCAL_API_URL}/converter`, {
       params: {
         cfg: 'json',
-        gy: today.getFullYear(),
-        gm: today.getMonth() + 1,
-        gd: today.getDate(),
+        gy: date.getFullYear(),
+        gm: date.getMonth() + 1,
+        gd: date.getDate(),
         g2h: 1,
       },
     });
