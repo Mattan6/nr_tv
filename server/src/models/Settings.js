@@ -10,7 +10,7 @@ const settingsSchema = new mongoose.Schema(
   {
     synagogueName: {
       type: String,
-      default: 'בית הכנסת ניצן',
+      default: 'בית הכנסת נווה רחמים',
     },
     location: {
       city: {
