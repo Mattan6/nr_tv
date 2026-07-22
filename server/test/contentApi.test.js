@@ -133,3 +133,33 @@ test('writes survive in content.json', async () => {
   const written = JSON.parse(await fs.readFile(path.join(dir, 'content.json'), 'utf8'));
   assert.ok(written.shiurim.some((it) => it.name === 'שיעור נוסף'));
 });
+
+// Placed last deliberately: it fills a panel to MAX_ITEMS, which would break any
+// later test that expects to create in the same panel.
+test('POST refuses to add to a panel already at MAX_ITEMS', async () => {
+  const { contentStore } = require('../src/store/contentStore');
+  const { MAX_ITEMS } = require('../src/store/panels');
+
+  // Top the panel up to the cap through the store directly, in one write — MAX_ITEMS
+  // individual HTTP round trips would make this test needlessly slow.
+  await contentStore.update((draft) => {
+    while (draft.azkarot.length < MAX_ITEMS) {
+      draft.azkarot.push({
+        id: `bulk-${draft.azkarot.length}`,
+        name: 'ממולא',
+        detail: '',
+        date: 'א',
+        isActive: true,
+      });
+    }
+  });
+
+  const res = await send('POST', `${base}/azkarot`, { name: 'חדש', detail: '', date: 'ב' });
+  const body = await res.json();
+
+  assert.strictEqual(res.status, 400);
+  assert.ok(body.message.includes(String(MAX_ITEMS)), 'expected the Hebrew message to name the limit');
+
+  const list = await (await fetch(`${base}/azkarot`)).json();
+  assert.strictEqual(list.length, MAX_ITEMS, 'the over-limit item must not have been added');
+});

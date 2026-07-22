@@ -5,6 +5,13 @@
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const MAX_LEN = 300;
 
+// A real synagogue's panels hold a handful of items each — a few announcements, a
+// handful of shiurim. This cap is ~two orders of magnitude above that, so it never
+// bothers the gabbai; it exists only to bound how large content.json can grow, since
+// the API is unauthenticated by design (see the spec's "On the absence of auth") and
+// every write serializes and fsyncs the whole document.
+const MAX_ITEMS = 500;
+
 const PANELS = {
   announcements: {
     text: { required: true },
@@ -61,4 +68,4 @@ function validateItem(panel, body) {
   return Object.keys(errors).length ? { errors } : { fields };
 }
 
-module.exports = { PANEL_KEYS, isPanel, validateItem };
+module.exports = { PANEL_KEYS, isPanel, validateItem, MAX_ITEMS };

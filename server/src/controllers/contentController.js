@@ -1,9 +1,13 @@
 const { randomUUID } = require('node:crypto');
 const { contentStore, NotFoundError } = require('../store/contentStore');
-const { isPanel, validateItem } = require('../store/panels');
+const { isPanel, validateItem, MAX_ITEMS } = require('../store/panels');
 
 // One controller for all four panels — they differ only in their fields, and
 // store/panels.js already describes that difference.
+
+// A mutator throws this to abort a create once a panel is already at MAX_ITEMS; the
+// controller maps it to a 400, same as any other validation failure.
+class ItemLimitError extends Error {}
 
 // Wraps a handler so panel validation, NotFoundError and unexpected failures are
 // handled once instead of five times.
@@ -16,6 +20,9 @@ const handler = (fn) => async (req, res, next) => {
   } catch (err) {
     if (err instanceof NotFoundError) {
       return res.status(404).json({ message: 'הפריט לא נמצא' });
+    }
+    if (err instanceof ItemLimitError) {
+      return res.status(400).json({ message: `אי אפשר להוסיף יותר מ-${MAX_ITEMS} פריטים בפאנל זה` });
     }
     next(err);
   }
@@ -36,6 +43,7 @@ const createItem = handler(async (req, res) => {
   if (errors) return res.status(400).json({ message: 'שדות לא תקינים', errors });
 
   const created = await contentStore.update((draft) => {
+    if (draft[panel].length >= MAX_ITEMS) throw new ItemLimitError(panel);
     const item = { id: randomUUID(), ...fields, isActive: true };
     draft[panel].push(item);
     return item;
