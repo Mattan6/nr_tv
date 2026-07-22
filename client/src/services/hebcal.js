@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { format } from 'date-fns';
+import { SHABBAT_CONFIG } from '../components/display/displayData';
 
 const HEBCAL_API_URL = import.meta.env.VITE_HEBCAL_API_URL || 'https://www.hebcal.com';
 
@@ -60,13 +61,17 @@ export const getHebrewDate = async (date = new Date()) => {
 
 /**
  * Get Parasha (Torah portion), candle lighting and havdalah for this week.
- * @param {number} [candleLightingMin=20] - Minutes before sunset for candle
- *   lighting, sent as Hebcal's `b` parameter. Passed explicitly rather than left to
- *   Hebcal's per-location default so the shul's posted time can only change when
- *   this number does. The caller supplies it from SHABBAT_CONFIG.
+ * @param {number} [candleLightingMin] - Minutes before sunset for candle lighting,
+ *   sent as Hebcal's `b` parameter. Passed explicitly rather than left to Hebcal's
+ *   per-location default so the shul's posted time can only change when this number
+ *   does. Defaults to `SHABBAT_CONFIG.candleLightingMinBeforeSunset` — the one place
+ *   the number lives, and the seam the future admin panel attaches to. Do NOT restore
+ *   a literal default here: the legacy callers below pass no argument, and a second
+ *   copy of the number would let them silently diverge from the display the first
+ *   time the config changed.
  * @returns {Promise} Parasha information
  */
-export const getParasha = async (candleLightingMin = 20) => {
+export const getParasha = async (candleLightingMin = SHABBAT_CONFIG.candleLightingMinBeforeSunset) => {
   try {
     const response = await axios.get(`${HEBCAL_API_URL}/shabbat`, {
       params: {
