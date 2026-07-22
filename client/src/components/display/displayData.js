@@ -114,6 +114,9 @@ function formatJerusalem(date) {
       hour12: false,
     });
   }
+  // No `% 24` guard here against an ICU build rendering midnight as hour "24" (contrast
+  // israelParts below) — harmless today because no prayer row or zman ever lands exactly
+  // at 00:00, not because the two formatters are equally hardened.
   return jerusalemClock.format(date);
 }
 
@@ -389,10 +392,6 @@ export function screenSegment(now) {
   return { screen, key: `${screen}@${localYmd(start)}` };
 }
 
-export function scheduledScreen(now) {
-  return screenSegment(now).screen;
-}
-
 // Finds the next prayer after `now` from a resolved `list` (uses each entry's
 // `clock`) and returns its name, clock time, and an HH:MM:SS countdown.
 //
@@ -428,9 +427,17 @@ export function computeNextMinyan(now, list) {
   if (!target) return { name: '', time: '', countdown: '--:--:--' };
 
   const [h, m] = target.clock.split(':').map(Number);
-  // Wall-clock arithmetic on Israel's clock, the same shape the device-local version
-  // used: minutes-of-day plus whole days. (It therefore carries the same pre-existing
-  // approximation across a DST shift in a multi-day roll-forward.)
+  // Wall-clock arithmetic on Israel's clock: `daysAhead` is multiplied by a flat 1440
+  // (24h), so a roll-forward that spans an Israel DST transition inherits that day's
+  // real length of 23h or 25h, and the countdown is off by the DST offset until the
+  // transition itself passes — e.g. Thursday 2026-03-26 19:20 shows "10:20:00" when
+  // the true remaining time is 9:20:00. Measured over two years on Asia/Jerusalem:
+  // ~1,600 minutes here and ~15,740 for the Shabbat list, all inside the evening
+  // window before one of Israel's four DST transitions in that span. The old
+  // epoch-difference version (`(base - now) / 1000`) had no such gap — epoch ms don't
+  // move with DST — but it read the epoch through the *device's* clock, which is the
+  // dependency this rewrite exists to remove. Only this countdown pays for that
+  // trade; the prayer name and displayed clock time are unaffected.
   const diffMs =
     (daysAhead * 1440 + h * 60 + m) * 60000 - ((p.hour * 60 + p.minute) * 60000 + p.second * 1000 + p.ms);
   const diff = Math.max(0, Math.floor(diffMs / 1000));

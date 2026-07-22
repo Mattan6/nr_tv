@@ -123,7 +123,7 @@ merely relocated the contradiction: with the TV on UTC the זמנים rows poste
 `שקיעה 19:43` while the clock above them read `16:43`.
 
 The calendar half matters more than the clock half. `upcomingSaturday`,
-`governingThursday` and `scheduledScreen` ask which *day* it is, so a TV set east of
+`governingThursday` and `screenSegment` ask which *day* it is, so a TV set east of
 Israel gets a different answer for part of every evening. On `Pacific/Auckland`,
 `upcomingSaturday` called at Israel's Saturday 19:43 lands on the device's Sunday and
 returns **next** Saturday — blanking every candle/havdalah row while שחרית and מנחה go on
@@ -138,7 +138,11 @@ tz database, `israelParts` falls back to the device's own fields — degrading t
 behaviour rather than blanking the screen.
 
 Rendered output is unchanged on an Israel-configured machine, and identical on `UTC`,
-`Europe/Athens` and `Pacific/Auckland`.
+`Europe/Athens` and `Pacific/Auckland` — with one exception: the מניין הבא countdown now
+does flat wall-clock arithmetic instead of an epoch difference, so on any machine it briefly
+overshoots or undershoots by the DST offset in the evening window before one of Israel's own
+DST transitions (a few thousand minutes a year; see the comment in `computeNextMinyan`). The
+prayer name and displayed clock time are never affected.
 
 ## Code structure
 
