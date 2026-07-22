@@ -115,9 +115,18 @@ export function isSummerTime(iso) {
       return sign * (Number(m[2]) * 60 + Number(m[3])) === 180;
     }
   }
+  // A bare date-time ("...T19:15:00" — no "Z", no explicit offset) would otherwise
+  // be parsed by `new Date` as local time on THIS device, reintroducing the very
+  // device-clock dependency this function exists to avoid. Hebcal never actually
+  // sends this shape (it always carries an offset), but pin it to UTC anyway so
+  // the fallback below can't be fooled if that ever changes.
+  let anchor = iso;
+  if (typeof iso === 'string' && /T/.test(iso) && !/Z$/.test(iso)) {
+    anchor = `${iso}Z`;
+  }
   // Fallback for a "Z" or date-only string: ask Intl for Jerusalem's offset then.
   try {
-    const d = new Date(iso);
+    const d = new Date(anchor);
     if (Number.isNaN(d.getTime())) return false;
     const parts = new Intl.DateTimeFormat('en-US', {
       timeZone: 'Asia/Jerusalem',
