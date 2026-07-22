@@ -25,7 +25,8 @@ app.get('/api/health', (req, res) => {
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({ message: 'Something went wrong!' });
 });
 
 module.exports = app;

@@ -84,9 +84,14 @@ export default function ItemForm() {
       navigate(`/adminGabbai/${panel}`);
     } catch (error) {
       // `values` is deliberately untouched — the gabbai never loses what he typed.
+      const status = error.response?.status;
       const data = error.response?.data;
       setFieldErrors(data?.errors || {});
-      setMessage(data?.message || 'השמירה נכשלה — בדוק את החיבור לשרת');
+      // The server's `message` is only trustworthy Hebrew on a 400 — that's the
+      // validation path the Hebrew strings in panels.js/contentController.js were
+      // written for. Every other status (500, a proxy's plain-text error, etc.) falls
+      // back to our own Hebrew message instead of showing English inside an RTL UI.
+      setMessage((status === 400 && data?.message) || 'השמירה נכשלה — בדוק את החיבור לשרת');
       setSaving(false);
     }
   };
