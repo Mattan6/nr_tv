@@ -178,8 +178,13 @@ test('update stamps updatedAt', async () => {
 In `server/package.json`, replace the `"test"` script:
 
 ```json
-    "test": "node --test test/"
+    "test": "node --test"
 ```
+
+No path argument: Node's test runner auto-discovers `**/*.test.js` under the working
+directory (excluding `node_modules`). Passing `test/` instead makes Node 22 on Windows
+resolve `test` as a *module* and fail with `MODULE_NOT_FOUND`, and a glob would depend
+on the shell doing the expansion.
 
 - [ ] **Step 4: Run the tests to verify they fail**
 
