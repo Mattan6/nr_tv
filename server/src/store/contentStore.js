@@ -20,9 +20,22 @@ function createContentStore(dir) {
   const tmp = `${file}.tmp`;
   let cache = null;
   let queue = Promise.resolve();
+  // Set when load() finds content.json present but unparseable. The corrupt file is
+  // left alone at that point (it may be recoverable by hand) but it can't be left
+  // alone forever: the next successful write would otherwise rename a fresh tmp file
+  // straight over it and destroy the only copy. So the first persist() after this
+  // flag is set renames the corrupt file aside instead of clobbering it, then clears
+  // the flag — one preservation per corruption, not one per write.
+  let corruptPending = false;
 
   async function persist(doc) {
     await fs.mkdir(dir, { recursive: true });
+    if (corruptPending) {
+      const corruptPath = `${file}.corrupt-${Date.now()}`;
+      await fs.rename(file, corruptPath);
+      console.error(`⚠️  Preserved the corrupt content.json at ${corruptPath} before writing new content.`);
+      corruptPending = false;
+    }
     const handle = await fs.open(tmp, 'w');
     try {
       await handle.writeFile(JSON.stringify(doc, null, 2), 'utf8');
@@ -42,10 +55,12 @@ function createContentStore(dir) {
       if (err.code === 'ENOENT') {
         await persist(cache);
       } else {
-        // Do NOT overwrite: the file may be recoverable by hand, and clobbering it
-        // would destroy the gabbai's content to fix a parse error.
+        // Don't touch the corrupt file here — it may be recoverable by hand. It
+        // survives until the next persist(), which renames it aside (see above)
+        // rather than overwriting it.
+        corruptPending = true;
         console.error(
-          `⚠️  ${file} is unreadable (${err.message}). Serving defaults; the file is left untouched for manual recovery.`
+          `⚠️  ${file} is unreadable (${err.message}). Serving defaults; the existing file will be preserved as content.json.corrupt-<timestamp> on the next write.`
         );
       }
     }
