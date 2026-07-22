@@ -29,15 +29,15 @@ export const SHABBAT_CONFIG = {
   arvitBeforeHavdalahMin: { summer: 3, winter: 10 },
 };
 
+// Five rows, all resolved by resolveShabbatTimes below. סוף זמן ק״ש and מנחה גדולה
+// were dropped — both already appear in the זמנים panel — and שיעור בפרשה moved to
+// the שיעורים panel.
 export const SHABBAT_PRAYERS = [
-  { name: 'הדלקת נרות', time: '18:21' },
-  { name: 'מנחה וקבלת שבת', time: '18:26' },
-  { name: 'שחרית', time: '07:45' },
-  { name: 'סוף זמן ק״ש', time: '09:10' },
-  { name: 'מנחה גדולה', time: '13:00' },
-  { name: 'שיעור בפרשה', time: '17:00' },
-  { name: 'מנחה', time: '17:30' },
-  { name: 'ערבית מוצ״ש', time: '19:16' },
+  { name: 'הדלקת נרות', computed: 'shabCandles' },
+  { name: 'מנחה וקבלת שבת', computed: 'shabKabbalat' },
+  { name: 'שחרית', computed: 'shabShacharit' },
+  { name: 'מנחה', computed: 'shabMincha' },
+  { name: 'ערבית מוצ״ש', computed: 'shabArvit' },
 ];
 
 // Maps each displayed zman to its Hebcal `times` field. Times come live from
@@ -180,6 +180,30 @@ export function upcomingSaturday(now) {
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7));
   return d;
+}
+
+// Hebcal's /shabbat response (already fetched for the parasha) also carries the
+// candle-lighting and havdalah timestamps — no extra request needed for either.
+export function shabbatAnchors(shabbatResponse) {
+  const items = shabbatResponse?.items || [];
+  const pick = (category) => items.find((it) => it.category === category)?.date || null;
+  return { candles: pick('candles'), havdalah: pick('havdalah') };
+}
+
+// Three anchors in, five display times out. Any missing anchor yields null, which
+// resolvePrayers renders as "--:--" — never a stale or invented time.
+export function resolveShabbatTimes(
+  { candles, havdalah, saturdaySunset },
+  config = SHABBAT_CONFIG
+) {
+  const season = isSummerTime(candles || saturdaySunset || havdalah) ? 'summer' : 'winter';
+  return {
+    shabCandles: toClock(candles),
+    shabKabbalat: toClock(candles, config.kabbalatAfterCandlesMin[season]),
+    shabShacharit: config.shacharit[season],
+    shabMincha: toClock(saturdaySunset, -config.minchaBeforeSunsetMin),
+    shabArvit: toClock(havdalah, -config.arvitBeforeHavdalahMin[season]),
+  };
 }
 
 // מנחה = the governing Thursday's sunset minus 20 minutes, fixed for the week.
