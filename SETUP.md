@@ -202,6 +202,10 @@ boot from `server/src/store/defaultContent.js`. Back it up by copying that one f
 The store caches the file in memory, so **editing `content.json` by hand requires a
 server restart.** Edit through the admin panel instead wherever possible.
 
-The display re-fetches every 30 seconds, so a change reaches the TV within half a
-minute without touching the TV. If the server is unreachable the display keeps showing
-the last content it saw rather than blanking.
+⚠️ **Not wired up yet**: the display screen (`SynagogueDisplay.jsx`) still reads its
+הודעות, שיעורי תורה, שמחות ומזל טוב and לעילוי נשמת from a static file
+(`displayData.js`), not from `/api/content`. Saving a change in the admin panel updates
+`content.json` correctly, but it does **not** yet reach the TV — the display still shows
+the old static content until this connection is built. Whoever wires the display to
+`/api/content` should update this paragraph to describe the real refresh behavior
+(polling interval, reachability fallback) once it ships.

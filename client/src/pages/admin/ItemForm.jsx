@@ -18,10 +18,27 @@ export default function ItemForm() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  // Starts true on an edit route (there is something to load) and false on "new"
+  // (there is nothing to fetch, so the form must stay immediately usable).
+  const [loading, setLoading] = useState(!isNew);
 
+  // On an edit route the form must stay unusable until `item` is actually loaded —
+  // otherwise the gabbai can type into the still-blank fields during the fetch (or
+  // after it fails / 404s) and submit before `item` is set, which would send an
+  // explicit isActive: true and silently un-hide a hidden item. See `disabled` below.
   useEffect(() => {
     if (!meta || isNew) return;
-    getPanel(panel)
+    // setLoading/setItem/setMessage are deferred into a microtask (rather than called
+    // as bare statements here) to satisfy react-hooks/set-state-in-effect, matching
+    // PanelList.jsx's approach. The fetch is a real network round trip, so the extra
+    // microtask tick is not observable.
+    Promise.resolve()
+      .then(() => {
+        setLoading(true);
+        setItem(null);
+        setMessage('');
+      })
+      .then(() => getPanel(panel))
       .then((list) => {
         const found = list.find((it) => it.id === id);
         if (!found) {
@@ -31,7 +48,8 @@ export default function ItemForm() {
         setItem(found);
         setValues(Object.fromEntries(meta.fields.map((f) => [f.key, found[f.key] || ''])));
       })
-      .catch(() => setMessage('לא ניתן לטעון את הפריט'));
+      .catch(() => setMessage('לא ניתן לטעון את הפריט'))
+      .finally(() => setLoading(false));
   }, [panel, id, isNew, meta]);
 
   if (!meta) {
@@ -45,8 +63,14 @@ export default function ItemForm() {
 
   const setField = (key, value) => setValues((prev) => ({ ...prev, [key]: value }));
 
+  // On an edit route, disabled until the real item has loaded — there is no valid
+  // item to save before then, and the messages above already explain why (not found /
+  // failed to load). The "new" route has nothing to load, so it is never held here.
+  const disabled = saving || (!isNew && !item);
+
   const submit = async (event) => {
     event.preventDefault();
+    if (disabled) return;
     setSaving(true);
     setFieldErrors({});
     setMessage('');
@@ -72,6 +96,7 @@ export default function ItemForm() {
       <Link to={`/adminGabbai/${panel}`} style={S.backLink}>‹ חזרה</Link>
       <h1 style={S.title}>{isNew ? meta.addLabel : `עריכת ${meta.title}`}</h1>
       {message && <div style={S.error}>{message}</div>}
+      {loading && <p style={S.muted}>טוען…</p>}
 
       <form onSubmit={submit}>
         {meta.fields.map((field) => (
@@ -87,7 +112,8 @@ export default function ItemForm() {
                 placeholder={field.placeholder || ''}
                 onChange={(e) => setField(field.key, e.target.value)}
                 rows={4}
-                style={{ ...S.input, resize: 'vertical' }}
+                disabled={disabled}
+                style={{ ...S.input, resize: 'vertical', opacity: disabled ? 0.6 : 1 }}
               />
             ) : (
               <input
@@ -96,14 +122,15 @@ export default function ItemForm() {
                 value={values[field.key]}
                 placeholder={field.placeholder || ''}
                 onChange={(e) => setField(field.key, e.target.value)}
-                style={S.input}
+                disabled={disabled}
+                style={{ ...S.input, opacity: disabled ? 0.6 : 1 }}
               />
             )}
             {fieldErrors[field.key] && <div style={S.fieldError}>{fieldErrors[field.key]}</div>}
           </div>
         ))}
 
-        <button type="submit" disabled={saving} style={{ ...S.primaryButton, opacity: saving ? 0.6 : 1 }}>
+        <button type="submit" disabled={disabled} style={{ ...S.primaryButton, opacity: disabled ? 0.6 : 1 }}>
           {saving ? 'שומר…' : 'שמור'}
         </button>
       </form>
