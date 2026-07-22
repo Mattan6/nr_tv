@@ -18,7 +18,14 @@ export default function PanelList() {
     // synchronous setState calls in an effect body. The fetch is a real network
     // round trip, so the extra microtask tick is not observable.
     Promise.resolve()
-      .then(() => setLoading(true))
+      // Clearing the error here matters because react-router reuses this component
+      // across /adminGabbai/:panel changes (back/forward, or an edited URL). Without
+      // it, a failed save on one panel keeps its Hebrew error on screen after the
+      // next panel loads successfully.
+      .then(() => {
+        setLoading(true);
+        setError('');
+      })
       .then(() => getPanel(panel))
       .then(setItems)
       .catch(() => setError('לא ניתן לטעון את הרשימה'))
