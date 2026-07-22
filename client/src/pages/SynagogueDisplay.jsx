@@ -15,6 +15,9 @@ import {
   computeNextMinyan,
   governingThursday,
   weeklyMinchaTime,
+  upcomingSaturday,
+  shabbatAnchors,
+  resolveShabbatTimes,
 } from '../components/display/displayData';
 import TopBar from '../components/display/TopBar';
 import PrayerTimesPanel from '../components/display/PrayerTimesPanel';
@@ -40,6 +43,7 @@ const SynagogueDisplay = () => {
   const [azkIdx, setAzkIdx] = useState(0);
   const [zmanimTimes, setZmanimTimes] = useState(null);
   const [minchaTime, setMinchaTime] = useState(null);
+  const [shabbatTimes, setShabbatTimes] = useState({});
   const [parasha, setParasha] = useState('');
 
   // Scale the fixed 1920x1080 canvas to fit the screen.
@@ -72,14 +76,21 @@ const SynagogueDisplay = () => {
     const load = async () => {
       try {
         const today = new Date();
-        const [z, zThu, p] = await Promise.all([
+        const [z, zThu, zSat, p] = await Promise.all([
           getZmanim(today),
           getZmanim(governingThursday(today)),
+          getZmanim(upcomingSaturday(today)),
           getParasha(),
         ]);
         if (cancelled) return;
         setZmanimTimes(z.times || null);
         setMinchaTime(weeklyMinchaTime(zThu?.times?.sunset));
+        setShabbatTimes(
+          resolveShabbatTimes({
+            ...shabbatAnchors(p),
+            saturdaySunset: zSat?.times?.sunset,
+          })
+        );
         const parashaItem = p.items?.find((it) => it.category === 'parashat');
         setParasha(parashaItem?.hebrew || '');
       } catch (error) {
@@ -107,7 +118,13 @@ const SynagogueDisplay = () => {
   }
 
   const isShab = screen === 'shabbat';
-  const prayers = resolvePrayers(isShab ? SHABBAT_PRAYERS : WEEKDAY_PRAYERS, zmanimTimes, { mincha: minchaTime });
+  // Each schedule gets its own computed map — both lists would otherwise collide
+  // on a key named `mincha` holding different values.
+  const prayers = resolvePrayers(
+    isShab ? SHABBAT_PRAYERS : WEEKDAY_PRAYERS,
+    zmanimTimes,
+    isShab ? shabbatTimes : { mincha: minchaTime }
+  );
   const prayersTitle = isShab ? 'זמני תפילות · שבת' : 'זמני תפילות · חול';
   const prayersSub = isShab ? parasha || 'שבת קודש' : weekday;
   const next = computeNextMinyan(now, prayers);
