@@ -965,6 +965,23 @@ git commit -m "fix: make the client reachable from other devices on the LAN"
 
 ### Task 5: Display reads content from the server
 
+> **Status note (added post-merge, during the final whole-branch review):** this task
+> was split. Step 1 (`client/src/services/content.js`) shipped as its own commit,
+> "Task 5a". Steps 2–8 below — the polling hook and the `SynagogueDisplay.jsx` /
+> `displayData.js` edits — were **deferred** ("Task 5b") because another session was
+> concurrently rewriting both of those files on `feature/shabbat-prayer-times` at the
+> time this branch was implemented. See the spec's "Implementation status" section
+> (top of `docs/superpowers/specs/2026-07-22-admin-panel-design.md`) for the full
+> picture: the seed content currently exists in two places, and the TV does not yet
+> read from `/api/content`.
+>
+> **Before running Steps 5–8 below, re-read them against the real, current
+> `SynagogueDisplay.jsx`.** The quoted "replace this / with this" code blocks were
+> written against the file as it stood before the concurrent rewrite landed — line
+> numbers, surrounding code, and possibly the rotation-state variables themselves will
+> have moved. Diff the plan's before/after snippets against the actual file first;
+> don't paste them in blind.
+
 **Files:**
 - Create: `client/src/services/content.js`
 - Create: `client/src/hooks/useDisplayContent.js`

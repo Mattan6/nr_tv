@@ -1,10 +1,37 @@
 # פאנל ניהול תוכן — Design
 
 **Date:** 2026-07-22
-**Status:** Approved
+**Status:** Approved — partially shipped, see "Implementation status" below.
 **Scope:** An admin panel at `/adminGabbai` letting the gabbai edit the four content
 panels of the synagogue display — הודעות, שיעורי תורה, שמחות ומזל טוב, לעילוי נשמת —
 from his phone, without touching code.
+
+## Implementation status
+
+This spec describes the full design, but plan Task 5 ("Display reads content from the
+server") was deliberately split in two, because another session was concurrently
+rewriting `client/src/pages/SynagogueDisplay.jsx` and
+`client/src/components/display/displayData.js` on `feature/shabbat-prayer-times` at the
+same time this branch was implemented:
+
+- **Shipped**: the content store, the panel schema, the `/api/content` REST API, the
+  client API wrapper `client/src/services/content.js`, and the full admin UI
+  (`client/src/pages/admin/`). The gabbai can open `/adminGabbai` and edit content
+  today, and every write correctly lands in `server/data/content.json`.
+- **Not shipped**: `useDisplayContent()` (plan Task 5, Steps 2–8) and the
+  corresponding edits to `SynagogueDisplay.jsx` / `displayData.js`. The TV display does
+  **not** read from `/api/content` yet — it still renders the static arrays in
+  `displayData.js`. Consequently the seed content exists **twice**: once in
+  `server/src/store/defaultContent.js` (served by the API, edited via the admin panel)
+  and once, unchanged, in `displayData.js` (what the TV actually shows). A save in
+  `/adminGabbai` does not reach the TV.
+  - The **"Display wiring"** section below and **verification steps 4–8** describe the
+    not-yet-shipped behavior — treat them as the spec for the deferred half, not as a
+    description of what runs today.
+  - **Whoever picks up the deferred half**: `SynagogueDisplay.jsx` has changed
+    underneath the plan since it was written. Re-read the plan's Task 5, Steps 5–8
+    quoted code against the real current file before applying it — the line numbers
+    and surrounding code will have moved.
 
 ## Problem
 
@@ -39,6 +66,27 @@ on a synagogue LAN and was chosen deliberately for the gabbai's sake — a login
 forget is worse than no login. It stops being acceptable the moment the server is exposed
 to the internet. If that ever happens, this decision must be revisited before the port is
 opened.
+
+### On `app.use(cors())`
+
+`app.js` runs `app.use(cors())` with no origin restriction, which means **any web page,
+on any origin, that a browser on the synagogue LAN happens to load can write to
+`/api/content`** — not just `/adminGabbai` itself. Verified live: a cross-origin
+`DELETE` sent from an arbitrary origin against a running instance returned `200` and
+removed the item.
+
+This is a materially wider hole than the "unlisted path" rationale above covers, because
+`/api/content` is a fixed, documented, guessable path — no knowledge of `/adminGabbai`
+is required to hit it. Concretely: any page opened by anyone on the synagogue Wi-Fi
+(an ad, a compromised site, a browser extension) could silently scan the LAN for the
+server and wipe all content, with no interaction from the gabbai and no unlisted URL to
+guess.
+
+**Accepted as part of the same LAN-only posture as the absence of auth** — open CORS was
+a deliberate choice, not an oversight, made alongside the no-auth decision above. It
+must be revisited together with authentication before the server is ever reachable from
+outside the LAN; do not narrow CORS on its own without also addressing auth, since
+either one alone still leaves the other hole open.
 
 ## Architecture
 
@@ -114,9 +162,11 @@ is unchanged — `AnnouncementsPanel` already sets `white-space: pre-line`.
 
 ### Removal from `displayData.js`
 
-The four constants are **deleted**. The seed module becomes the single source, so there
-is no second copy to drift. The prayer, zmanim, and Shabbat logic in that file is
-untouched.
+The four constants are meant to be **deleted**, once the deferred half of Task 5 lands
+(see "Implementation status" at the top) — the seed module becomes the single source,
+so there is no second copy to drift. **As shipped so far, they are still present and
+still what the TV actually renders**; only the admin/API side of this design has been
+built. The prayer, zmanim, and Shabbat logic in that file is untouched either way.
 
 ## API — `/api/content`
 
