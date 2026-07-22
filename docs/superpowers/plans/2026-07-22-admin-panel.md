@@ -527,7 +527,7 @@ module.exports = { PANEL_KEYS, isPanel, validateItem };
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `cd server && npm test`
-Expected: PASS — `# pass 15`, `# fail 0` (6 from Task 1, 9 here).
+Expected: PASS — `# pass 18`, `# fail 0` (9 from Task 1, 9 here).
 
 - [ ] **Step 5: Commit**
 
@@ -869,7 +869,7 @@ app.listen(PORT, () => {
 - [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `cd server && npm test`
-Expected: PASS — `# pass 25`, `# fail 0` (6 + 9 + 10).
+Expected: PASS — `# pass 28`, `# fail 0` (9 + 9 + 10).
 
 If the API tests hang, `connectDB()` leaked into `app.js` — it belongs only in `server.js`.
 
@@ -1874,7 +1874,7 @@ the last content it saw rather than blanking.
 - [ ] **Step 6: Run the full test suite**
 
 Run: `cd server && npm test`
-Expected: PASS — `# pass 25`, `# fail 0`.
+Expected: PASS — `# pass 28`, `# fail 0`.
 
 Run: `cd client && npm run lint`
 Expected: no new errors.
@@ -1892,7 +1892,7 @@ git commit -m "feat: add admin item form for all four panels"
 
 Run these once, after Task 8, on the machine that will actually run the display:
 
-- [ ] `cd server && npm test` — 25 passing.
+- [ ] `cd server && npm test` — 28 passing.
 - [ ] `cd client && npm run lint` — no new errors.
 - [ ] `git status` does not list `server/data/content.json`.
 - [ ] Add, edit, hide and delete one item in each of the four panels, from the phone.
