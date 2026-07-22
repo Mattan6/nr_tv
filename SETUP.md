@@ -188,3 +188,20 @@ synagogue-display/
 ---
 
 **בהצלחה! 🎉**
+
+## ניהול תוכן (Admin panel)
+
+The gabbai edits הודעות, שיעורי תורה, שמחות ומזל טוב and לעילוי נשמת at
+**`/adminGabbai`** — for example `http://192.168.1.20:5173/adminGabbai`. There is no
+login; access is by knowing the path. Do not expose the server outside the local
+network without adding authentication first.
+
+Content lives in `server/data/content.json`, which is git-ignored and created on first
+boot from `server/src/store/defaultContent.js`. Back it up by copying that one file.
+
+The store caches the file in memory, so **editing `content.json` by hand requires a
+server restart.** Edit through the admin panel instead wherever possible.
+
+The display re-fetches every 30 seconds, so a change reaches the TV within half a
+minute without touching the TV. If the server is unreachable the display keeps showing
+the last content it saw rather than blanking.
