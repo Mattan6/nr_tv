@@ -1,12 +1,25 @@
 # מדריך הפעלה - אפליקציית מסך דיגיטלי לבית הכנסת
 
+⚠️ **הערה**: השרת רץ כיום **בלי מסד נתונים בכלל** — ה-cluster הישן ב-MongoDB Atlas
+כבר לא קיים, וזו החלטה מכוונת. תוכן המסך (הודעות, שיעורים, מזל טוב, אזכרות) נשמר
+בקובץ `server/data/content.json` ונערך דרך פאנל הניהול ב-`/adminGabbai`, שאין בו
+התחברות בכלל. **כל שלבי ה-MongoDB וה"משתמש Admin" למטה הם legacy** — שרידים משלב
+מוקדם יותר של הפרויקט — ואינם נחוצים כדי להריץ את המסך או את פאנל הניהול. הם
+מסומנים בהתאם בכל שלב.
+
 ## דרישות מקדימות
 
-לפני שמתחילים, ודא שמותקנים במחשב שלך:
+לפני שמתחילים, ודא שמותקן במחשב שלך:
 - **Node.js** (גרסה 18 ומעלה) - [הורד כאן](https://nodejs.org/)
+
+<details>
+<summary>Legacy — לא נחוץ: MongoDB</summary>
+
 - **MongoDB** - אחת מהאופציות הבאות:
   - MongoDB מותקן מקומי - [הורד כאן](https://www.mongodb.com/try/download/community)
   - MongoDB Atlas (חינמי בענן) - [הרשם כאן](https://www.mongodb.com/cloud/atlas/register)
+
+</details>
 
 ## שלב 1: התקנת Dependencies
 
@@ -23,6 +36,10 @@ npm install
 ```
 
 ## שלב 2: הגדרת מסד נתונים
+
+⚠️ **Legacy — ניתן לדלג על השלב הזה כולו.** השרת רץ ללא מסד נתונים; שלב זה נשאר
+בתיעוד עבור מי שמתחבר לקוד ה-Mongoose הישן (`models/`, `controllers/announcementController.js`
+וכו') שאינו בשימוש בפועל.
 
 ### אופציה א': MongoDB מקומי
 1. התקן MongoDB במחשב
@@ -44,6 +61,7 @@ npm install
 
 ```env
 PORT=5000
+# Legacy — לא נדרש בפועל; השרת רץ בלי חיבור למסד נתונים.
 MONGODB_URI=mongodb://localhost:27017/synagogue-display
 # או אם משתמשים ב-MongoDB Atlas:
 # MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/synagogue-display
@@ -52,14 +70,26 @@ NODE_ENV=development
 ```
 
 ### Frontend (.env)
-הקובץ כבר קיים בתיקיית `client/.env`:
+צור קובץ `.env` בתיקיית `client` (או העתק מ-`client/.env.example`):
 ```env
-VITE_API_URL=http://localhost:5000
+# השאר את VITE_API_URL לא מוגדר! כשהוא לא מוגדר, client/src/services/api.js
+# נופל אוטומטית ל-`${window.location.hostname}:5000` — כלומר לכתובת שממנה
+# הדף עצמו נטען, בין אם זה מהמחשב, מהטלוויזיה או מהטלפון של הגבאי.
+# הגדר VITE_API_URL רק אם ה-API רץ על מכונה אחרת לגמרי מהדף.
+# VITE_API_URL=http://localhost:5000
 VITE_HEBCAL_API_URL=https://www.hebcal.com
 VITE_SEFARIA_API_URL=https://www.sefaria.org/api
 ```
 
+⚠️ **חשוב**: אם תגדיר `VITE_API_URL=http://localhost:5000`, האפליקציה תעבוד רק
+מהמחשב שמריץ את השרת — בטלפון של הגבאי `localhost` מתפענח לטלפון עצמו, לא לשרת,
+והפאנל לא יעבוד בכלל.
+
 ## שלב 4: יצירת משתמש Admin ראשוני
+
+⚠️ **Legacy — ניתן לדלג על השלב הזה כולו.** פאנל הניהול האמיתי נמצא ב-`/adminGabbai`
+(ראו "ניהול תוכן (Admin panel)" למטה) ואין בו התחברות בכלל — אין צורך במשתמש admin
+כדי לערוך תוכן. השלב הבא רלוונטי רק לקוד ה-Mongoose/auth הישן שאינו בשימוש.
 
 רוץ את הפקודה הבאה ליצירת משתמש מנהל:
 
@@ -126,6 +156,8 @@ npm run dev
 ## פתרון בעיות נפוצות
 
 ### שגיאת חיבור למסד נתונים
+Legacy — רלוונטי רק אם עדיין מנסים להריץ את קוד ה-Mongoose הישן. השרת עצמו רץ
+בכוונה בלי מסד נתונים, ואזהרת חיבור כזו בלוג אינה משפיעה על המסך או על פאנל הניהול.
 ```
 Error: connect ECONNREFUSED
 ```
