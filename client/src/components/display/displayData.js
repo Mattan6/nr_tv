@@ -128,37 +128,47 @@ export function toClock(iso, offsetMin) {
 // Deliberately NOT from the device clock: a display panel with a misconfigured
 // timezone would otherwise show winter times all summer, silently and forever.
 // Hebcal timestamps carry the offset, e.g. "2026-07-24T19:15:00+03:00".
+//
+// Returns true (קיץ), false (חורף), or null when the season genuinely could not be
+// determined. null must not collapse to false: a failed detection in July would
+// otherwise post שחרית 07:30 plus winter offsets — three confidently wrong times,
+// with nothing on screen to say so.
 export function isSummerTime(iso) {
-  if (typeof iso === 'string') {
-    const m = iso.match(/([+-])(\d{2}):?(\d{2})$/);
-    if (m) {
-      const sign = m[1] === '-' ? -1 : 1;
-      return sign * (Number(m[2]) * 60 + Number(m[3])) === 180;
-    }
+  if (typeof iso !== 'string') return null;
+  const m = iso.match(/([+-])(\d{2}):?(\d{2})$/);
+  if (m) {
+    const sign = m[1] === '-' ? -1 : 1;
+    return sign * (Number(m[2]) * 60 + Number(m[3])) === 180;
   }
   // A bare date-time ("...T19:15:00" — no "Z", no explicit offset) would otherwise
   // be parsed by `new Date` as local time on THIS device, reintroducing the very
   // device-clock dependency this function exists to avoid. Hebcal never actually
   // sends this shape (it always carries an offset), but pin it to UTC anyway so
-  // the fallback below can't be fooled if that ever changes.
-  let anchor = iso;
-  if (typeof iso === 'string' && /T/.test(iso) && !/Z$/.test(iso)) {
-    anchor = `${iso}Z`;
-  }
-  // Fallback for a "Z" or date-only string: ask Intl for Jerusalem's offset then.
+  // the lookup below can't be fooled if that ever changes.
+  const anchor = /T/.test(iso) && !/Z$/.test(iso) ? `${iso}Z` : iso;
+  // No offset in the string ("Z", UTC-pinned, or date-only): ask Intl what
+  // Jerusalem's offset was at that moment.
   try {
     const d = new Date(anchor);
-    if (Number.isNaN(d.getTime())) return false;
+    if (Number.isNaN(d.getTime())) return null;
     const parts = new Intl.DateTimeFormat('en-US', {
       timeZone: 'Asia/Jerusalem',
       timeZoneName: 'shortOffset',
     }).formatToParts(d);
-    return parts.find((p) => p.type === 'timeZoneName')?.value === 'GMT+3';
+    const zone = parts.find((p) => p.type === 'timeZoneName')?.value;
+    if (zone === 'GMT+3') return true;
+    if (zone === 'GMT+2') return false;
+    return null;
   } catch {
-    return false;
+    return null;
   }
 }
 
+// Resolves prayer entries against today's zmanim into { name, time, clock, day }.
+// `time` is what to display (may be text like "מיד לאחר מנחה"); `clock` is the
+// 'HH:MM' used for ordering / countdown (null when there is no real time yet);
+// `day` passes each entry's weekday through to computeNextMinyan, undefined when
+// the list belongs to a single day.
 export function resolvePrayers(entries, zmanimTimes, computed = {}) {
   const base = entries.map((e) => {
     let clock = null;
@@ -203,27 +213,60 @@ export function upcomingSaturday(now) {
   return d;
 }
 
+// Israel-local calendar date ('YYYY-MM-DD') of a Date, for comparing against the
+// first ten characters of a Hebcal timestamp. Built from the date's own fields
+// rather than toISOString(), which would answer in UTC and slide a day backwards
+// for anything before 02:00/03:00 local.
+function localYmd(d) {
+  const pad2 = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
 // Hebcal's /shabbat response (already fetched for the parasha) also carries the
 // candle-lighting and havdalah timestamps — no extra request needed for either.
-export function shabbatAnchors(shabbatResponse) {
+//
+// The response's range starts at TODAY and runs through the whole Shabbat block, so
+// any week containing a Yom Tov carries two of each category: the festival's and
+// Shabbat's. Taking the first `candles` posts the festival's time — e.g. Pesach
+// 5786 returns 1 Apr 18:40 and 3 Apr 18:42, and Shabbat is the 4th. Items are
+// therefore matched to the actual Friday/Saturday of `saturday`, by local calendar
+// date, and a missing item yields null rather than someone else's time.
+export function shabbatAnchors(shabbatResponse, saturday) {
+  const empty = { candles: null, havdalah: null };
+  if (!(saturday instanceof Date) || Number.isNaN(saturday.getTime())) return empty;
   const items = shabbatResponse?.items || [];
-  const pick = (category) => items.find((it) => it.category === category)?.date || null;
-  return { candles: pick('candles'), havdalah: pick('havdalah') };
+  const on = (category, ymd) =>
+    items.find((it) => it.category === category && typeof it.date === 'string' && it.date.slice(0, 10) === ymd)
+      ?.date || null;
+  const satYmd = localYmd(saturday);
+  // Noon, so the subtraction can't be nudged across midnight by a DST shift.
+  const friYmd = localYmd(new Date(saturday.getFullYear(), saturday.getMonth(), saturday.getDate() - 1, 12));
+  return {
+    candles: on('candles', friYmd),
+    // When Shabbat runs straight into Yom Tov (Rosh Hashanah 2026-09-12, Sukkot
+    // 2027-10-02) there is no Saturday-night havdalah — Hebcal emits a candle
+    // lighting instead and havdalah lands Sunday night, ~24h from every other row
+    // and not a minyan time. ערבית still davens Saturday night at roughly the usual
+    // מוצ״ש hour, so that night's candle lighting is the anchor.
+    havdalah: on('havdalah', satYmd) || on('candles', satYmd),
+  };
 }
 
 // Three anchors in, five display times out. Any missing anchor yields null, which
-// resolvePrayers renders as "--:--" — never a stale or invented time.
+// resolvePrayers renders as "--:--" — never a stale or invented time. An
+// undetermined season does the same to the three rows that depend on one.
 export function resolveShabbatTimes(
-  { candles, havdalah, saturdaySunset },
+  { candles, havdalah, saturdaySunset } = {},
   config = SHABBAT_CONFIG
 ) {
-  const season = isSummerTime(candles || saturdaySunset || havdalah) ? 'summer' : 'winter';
+  const summer = isSummerTime(candles || saturdaySunset || havdalah);
+  const season = summer === null ? null : summer ? 'summer' : 'winter';
   return {
     shabCandles: toClock(candles),
-    shabKabbalat: toClock(candles, config.kabbalatAfterCandlesMin[season]),
-    shabShacharit: config.shacharit[season],
+    shabKabbalat: season ? toClock(candles, config.kabbalatAfterCandlesMin[season]) : null,
+    shabShacharit: season ? config.shacharit[season] : null,
     shabMincha: toClock(saturdaySunset, -config.minchaBeforeSunsetMin),
-    shabArvit: toClock(havdalah, -config.arvitBeforeHavdalahMin[season]),
+    shabArvit: season ? toClock(havdalah, -config.arvitBeforeHavdalahMin[season]) : null,
   };
 }
 

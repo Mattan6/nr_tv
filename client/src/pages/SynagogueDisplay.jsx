@@ -3,6 +3,7 @@ import { getZmanim, getParasha } from '../services/hebcal';
 import {
   WEEKDAY_PRAYERS,
   SHABBAT_PRAYERS,
+  SHABBAT_CONFIG,
   ZMANIM_ROWS,
   SHIURIM,
   ANNOUNCEMENTS,
@@ -70,32 +71,40 @@ const SynagogueDisplay = () => {
     return () => clearInterval(r);
   }, []);
 
-  // Live zmanim (Nitzan) + this week's parasha from Hebcal.
+  // Live zmanim (Nitzan) + this week's parasha, candle lighting and havdalah.
+  //
+  // allSettled, not all: the four requests feed four independent parts of the
+  // screen, and one failing must not blank or freeze the other three. Every branch
+  // also *assigns* — a rejected leg is written back as null so its panel falls to
+  // "--:--". Leaving the previous value in place would quietly post last week's
+  // times through an outage, which is worse than showing nothing.
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      try {
-        const today = new Date();
-        const [z, zThu, zSat, p] = await Promise.all([
-          getZmanim(today),
-          getZmanim(governingThursday(today)),
-          getZmanim(upcomingSaturday(today)),
-          getParasha(),
-        ]);
-        if (cancelled) return;
-        setZmanimTimes(z.times || null);
-        setMinchaTime(weeklyMinchaTime(zThu?.times?.sunset));
-        setShabbatTimes(
-          resolveShabbatTimes({
-            ...shabbatAnchors(p),
-            saturdaySunset: zSat?.times?.sunset,
-          })
-        );
-        const parashaItem = p.items?.find((it) => it.category === 'parashat');
-        setParasha(parashaItem?.hebrew || '');
-      } catch (error) {
-        console.error('Failed to load display data:', error);
+      const today = new Date();
+      const saturday = upcomingSaturday(today);
+      const [z, zThu, zSat, p] = await Promise.allSettled([
+        getZmanim(today),
+        getZmanim(governingThursday(today)),
+        getZmanim(saturday),
+        getParasha(SHABBAT_CONFIG.candleLightingMinBeforeSunset),
+      ]);
+      if (cancelled) return;
+      const value = (r) => (r.status === 'fulfilled' ? r.value : null);
+      const failures = [z, zThu, zSat, p].filter((r) => r.status === 'rejected');
+      if (failures.length) {
+        console.error('Failed to load display data:', failures.map((r) => r.reason));
       }
+      setZmanimTimes(value(z)?.times || null);
+      setMinchaTime(weeklyMinchaTime(value(zThu)?.times?.sunset));
+      setShabbatTimes(
+        resolveShabbatTimes({
+          ...shabbatAnchors(value(p), saturday),
+          saturdaySunset: value(zSat)?.times?.sunset,
+        })
+      );
+      const parashaItem = value(p)?.items?.find((it) => it.category === 'parashat');
+      setParasha(parashaItem?.hebrew || '');
     };
     load();
     const id = setInterval(load, ZMANIM_REFRESH_MS);
