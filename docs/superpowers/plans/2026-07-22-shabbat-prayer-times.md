@@ -2,6 +2,24 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **⚠️ Historical document — the code blocks below are stale.** This plan records the
+> original three tasks as they were written, and they shipped. Later review waves then
+> changed several of the interfaces it specifies. The task bodies are deliberately left
+> as written, so **read the code and
+> [the design spec](../specs/2026-07-22-shabbat-prayer-times-design.md), not the
+> snippets here**, for current behaviour. What changed since:
+>
+> | Plan says | Ships as |
+> |---|---|
+> | `shabbatAnchors(response)`, first item of each category | `shabbatAnchors(response, saturday)` — items matched to that Saturday's own calendar date, so a Yom Tov week cannot post the festival's times. מוצ״ש falls back to that Saturday's `candles` when there is no `havdalah` |
+> | `isSummerTime(iso) → boolean`, `false` on failure | `→ true \| false \| null`; `null` means "undetermined" and blanks the three season-dependent rows rather than silently choosing winter |
+> | `resolveShabbatTimes` always returns a שחרית | all-anchors-missing now yields `null` for שחרית too (Task 2 Step 5's expected output showing `"shabShacharit":"07:30"` no longer holds) |
+> | `Promise.all` for the Hebcal requests | `Promise.allSettled` — one failing request blanks only what it feeds |
+> | `SHABBAT_PRAYERS` entries are `{ name, computed }` | each also carries `day` (5 = Friday, 6 = Saturday), which `computeNextMinyan` uses; this closes the "Known limitation" at the foot of this plan |
+> | `getParasha()` with a literal `b=20` default | offset comes from `SHABBAT_CONFIG.candleLightingMinBeforeSunset` |
+> | Times formatted in device-local time | every clock, date, weekday, countdown and schedule boundary goes through `Asia/Jerusalem` (`toClock`, `israelParts`), so the "assumes the machine's clock is set to Israel time" constraint below no longer applies to the app — only to any scratch script that formats dates itself |
+> | Screen override pinned to the scheduled value | pinned to a schedule *segment key* (`screenSegment(now)`), so it expires at the next boundary and cannot resurrect a week later |
+
 **Goal:** Replace the eight placeholder Shabbat prayer times with five rows computed from live Hebcal data, correct year-round in both שעון קיץ and שעון חורף.
 
 **Architecture:** Pure functions in `displayData.js` turn three anchors (candle lighting, Shabbat שקיעה, הבדלה) into five display times, driven by a single `SHABBAT_CONFIG` object that a future admin panel will replace. `SynagogueDisplay.jsx` fetches the anchors and passes the resolved map into the existing `resolvePrayers` mechanism.

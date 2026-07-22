@@ -84,7 +84,8 @@ The −3 / −10 offset applies either way.
 the Shabbat panel is reachable on any weekday through the TopBar toggle, so midweek
 "today's sunset" is the wrong anchor for מנחה. A new `upcomingSaturday(now)` helper —
 mirroring the existing `governingThursday` — supplies the date, fetched as a third
-parallel request inside the existing `Promise.all`.
+parallel request alongside the existing ones (see "Failure behavior" below: the four
+requests are issued with `Promise.allSettled`, not `Promise.all`).
 
 ### Season detection
 
@@ -111,6 +112,33 @@ For the same reason every displayed clock is formatted through
 זמנים panels. Formatting in device-local time while detecting the season
 device-independently would render a self-contradicting panel on a wrongly-configured TV:
 computed rows an hour off while the fixed שחרית string stayed put.
+
+### Israel time everywhere, not just in the two panels
+
+The same argument applies to everything else on the screen that answers "what time is
+it", and to everything that answers "what day is it". The 100px header clock, the Hebrew
+and Gregorian date strings, the weekday name, the מניין הבא countdown and the
+Friday-09:00 / Sunday-00:00 schedule boundary all read the device's clock at first, which
+merely relocated the contradiction: with the TV on UTC the זמנים rows posted
+`שקיעה 19:43` while the clock above them read `16:43`.
+
+The calendar half matters more than the clock half. `upcomingSaturday`,
+`governingThursday` and `scheduledScreen` ask which *day* it is, so a TV set east of
+Israel gets a different answer for part of every evening. On `Pacific/Auckland`,
+`upcomingSaturday` called at Israel's Saturday 19:43 lands on the device's Sunday and
+returns **next** Saturday — blanking every candle/havdalah row while שחרית and מנחה go on
+describing the wrong Shabbat.
+
+One helper, `israelParts(date)`, returns Israel's calendar parts (year/month/day,
+hour/minute/second, and a weekday derived through a UTC `Date` so the device cannot nudge
+it). The header clock, the countdown, the boundary and the Saturday/Thursday anchors all
+read from it, and the three header `Intl` formatters take `timeZone: 'Asia/Jerusalem'`.
+`israelToday(now)` gives the Hebcal service Israel's calendar day. If the runtime has no
+tz database, `israelParts` falls back to the device's own fields — degrading to the old
+behaviour rather than blanking the screen.
+
+Rendered output is unchanged on an Israel-configured machine, and identical on `UTC`,
+`Europe/Athens` and `Pacific/Auckland`.
 
 ## Code structure
 
@@ -155,6 +183,19 @@ Any missing anchor yields `null` for the rows depending on it, which `resolvePra
 already renders as `--:--`. A Hebcal outage degrades to blank times rather than stale or
 invented ones. This matches how the זמנים panel already behaves.
 
+Each kind of failure has its own on-screen signature, and they are worth telling apart:
+
+| What went wrong | What the שבת panel looks like |
+|---|---|
+| Whole `/shabbat` request failed | `הדלקת נרות`, `מנחה וקבלת שבת` and `ערבית מוצ״ש` blank; `שחרית` and `מנחה` still show times |
+| Saturday zmanim request failed | only `מנחה` blank |
+| **Season undetermined** (`isSummerTime` → `null`) | **`מנחה וקבלת שבת`, `שחרית` and `ערבית מוצ״ש` blank while `הדלקת נרות` and `מנחה` still show times** |
+
+The third row is the distinctive one: it is the only case in which `שחרית` — a fixed
+string with no anchor to lose — goes blank, and the only case in which `הדלקת נרות` shows
+a time while the row two below it does not. If those three are blank and those two are
+not, season detection failed; nothing else produces that pattern.
+
 The four Hebcal requests are issued with `Promise.allSettled`, and each of the four
 pieces of state is assigned from its own leg: one failing request blanks only what it
 feeds. Assignment is unconditional — a rejected leg writes `null` rather than leaving the
@@ -163,11 +204,38 @@ reading the wall.
 
 ### Which schedule is on screen
 
-`scheduledScreen(now)` switches to **שבת at Friday 09:00** and back to **חול at Sunday
-00:00**. The TV is powered for weeks at a time, so this is re-derived from the
-once-a-second clock tick rather than read once at boot. The TopBar toggle records *which
-schedule it is overriding*, so a manual choice survives every tick until the schedule
-genuinely transitions, and is then dropped.
+The schedule switches to **שבת at Friday 09:00** and back to **חול at Sunday 00:00**, on
+Israel's calendar. The TV is powered for weeks at a time, so this is re-derived from the
+once-a-second clock tick rather than read once at boot, and it is derived — never written
+back through a `useEffect`, which would be vulnerable to a backgrounded tab's throttled
+timers and to remounts.
+
+The calendar therefore alternates between two kinds of **segment**:
+
+```
+חול   Sunday 00:00 → Friday 09:00
+שבת   Friday 09:00 → Sunday 00:00
+```
+
+`screenSegment(now)` returns both the screen and a `key` identifying the particular
+*run* of it — the screen plus the Israel calendar date that run began on, e.g.
+`shabbat@2026-07-24` or `weekday@2026-07-26`. A TopBar tap stores that key alongside the
+chosen screen, and the override applies only while `screenSegment(now).key` still
+matches. So a manual choice takes effect on the same render, survives every tick to the
+end of the segment it was cast in, and is dropped at the next boundary.
+
+**It must be the segment, not the screen value.** Pinning the override to the value it
+was overriding — "apply while the schedule still says `weekday`" — does not expire it: it
+merely stops *applying* at the next boundary and then resurrects when the schedule cycles
+back to that value, which happens every single week. One tap of **חול** on a Saturday
+would then suppress the שבת schedule on the following Friday, and the Friday after that,
+indefinitely — precisely the failure auto-switching exists to eliminate, reachable by one
+tap of its own toggle.
+
+A date-stamped key rather than a boundary timestamp: expiry is an identity question ("am
+I still in the segment I was cast in?"), not an ordering one, so no wall-clock-to-epoch
+conversion is needed and no DST transition can land the comparison an hour either side of
+a boundary. And a key like `weekday@2026-07-26` can never recur.
 
 `computeNextMinyan` needs the same day awareness: the Shabbat list spans two days, and
 without it a Saturday morning offers Friday's הדלקת נרות (first in the array, and in
@@ -191,7 +259,10 @@ it will attach to.
 No test framework will be added (decided during design). Verification is manual:
 
 1. Run `npm run dev` at the repo root and open the Shabbat panel via the TopBar toggle.
-2. Confirm all five rows show real times and none read `--:--`.
+2. **On an ordinary week** — no Yom Tov, and not late on a Saturday night — confirm all
+   five rows show real times and none read `--:--`. Blank rows are *correct* in the
+   cases step 6 and "Known edge case" below describe; this step is the baseline, not a
+   universal invariant.
 3. Cross-check הדלקת נרות and הבדלה against hebcal.com for Nitzan for the coming Shabbat.
 4. Confirm מנחה sits 90 minutes before **the coming Saturday's** שקיעה on hebcal.com —
    *not* before the שקיעה in the זמנים panel, which is today's and only coincides on
@@ -217,3 +288,29 @@ stay correct for the Shabbat that just ended. Accepted as-is: the panel's audien
 left by then, and blank beats posting next week's times as though they were tonight's.
 
 The display returns to the חול schedule at Sunday 00:00 regardless.
+
+### מניין הבא on a Saturday night
+
+There is a second, narrower symptom in the same window. Once `ערבית מוצ״ש` has passed,
+no Saturday-tagged row is still ahead, so `computeNextMinyan` rolls forward to the next
+day carrying rows — Friday — and offers the הדלקת נרות of **the Shabbat that has just
+ended**, six days in the past. The card reads, for example:
+
+```
+מניין הבא
+הדלקת נרות
+19:23
+בעוד 142:53:00
+```
+
+It lasts from `ערבית מוצ״ש` until Hebcal's `/shabbat` rolls over to the following week
+(after which that row blanks and the card falls to the next available one) — roughly
+3.5 hours in summer, 6.5 in winter.
+
+Accepted as-is. The countdown is the tell: anyone still in the building on מוצ״ש reading
+`בעוד 142:53:00` can see it is pointing six days out, not at tonight. The audience has
+left by then anyway. Recorded here so it is not re-reported as a new defect.
+
+(A three-digit countdown on the שבת panel is not by itself a fault — tapping שבת on a
+Sunday legitimately shows the coming Friday ~139 hours away. The symptom is specifically
+a *Saturday night*, where the next minyan ought to be hours away and is not.)
