@@ -348,7 +348,11 @@ Then cross-check against hebcal.com for Nitzan (31.7167, 34.6333) for the coming
 - הדלקת נרות matches Hebcal's candle lighting exactly.
 - מנחה וקבלת שבת is 2 minutes later (July is שעון קיץ).
 - שחרית reads 07:45.
-- מנחה is exactly 90 minutes before the שקיעה shown in the זמנים panel.
+- מנחה is exactly 90 minutes before **the coming Saturday's** שקיעה on hebcal.com.
+  Do **not** check it against the שקיעה in the זמנים panel: that panel shows *today's*
+  sunset, and the two only coincide when today is that Saturday. Midweek they differ by
+  a few minutes, which is correct — "correcting" it to today's sunset would reintroduce
+  the exact bug this feature removes.
 - ערבית מוצ״ש is 3 minutes before Hebcal's havdalah.
 
 - [ ] **Step 7: Remove the scratch script**
