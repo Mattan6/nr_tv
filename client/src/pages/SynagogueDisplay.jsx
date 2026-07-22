@@ -18,7 +18,7 @@ import {
   upcomingSaturday,
   shabbatAnchors,
   resolveShabbatTimes,
-  scheduledScreen,
+  screenSegment,
   israelParts,
   israelToday,
   toClock,
@@ -37,8 +37,8 @@ const ZMANIM_REFRESH_MS = 21600000; // 6 hours
 const pad = (n) => String(n).padStart(2, '0');
 
 const SynagogueDisplay = () => {
-  // null = follow the calendar; { screen, insteadOf } = a TopBar override, live only
-  // while `insteadOf` is still the scheduled screen. See below.
+  // null = follow the calendar; { screen, segmentKey } = a TopBar override, live only
+  // while the calendar is still inside that same schedule segment. See below.
   const [override, setOverride] = useState(null);
   const [now, setNow] = useState(() => new Date());
   const [scale, setScale] = useState(1);
@@ -127,13 +127,20 @@ const SynagogueDisplay = () => {
   // stays powered for weeks, so a page opened on Tuesday must not still be showing
   // weekday times on Shabbat.
   //
-  // A TopBar tap records which schedule it was overriding rather than replacing the
-  // screen outright. The override therefore holds for as long as that schedule does
-  // — it cannot be stomped by the next one-second tick — and is dropped the moment
-  // the schedule actually transitions.
-  const scheduled = scheduledScreen(now);
-  const screen = override && override.insteadOf === scheduled ? override.screen : scheduled;
-  const setScreen = (value) => setOverride({ screen: value, insteadOf: scheduled });
+  // A TopBar tap pins itself to the schedule *segment* it was overriding — the screen
+  // plus the date that run of it started on — rather than replacing the screen
+  // outright. Kept derived, so it cannot be stomped by the next one-second tick, nor
+  // lost to a remount, nor missed because a backgrounded tab throttled a timer.
+  //
+  // The segment key, not merely the screen value, is what makes it expire. 'shabbat'
+  // comes round again every week: an override compared against the value alone would
+  // stop applying at the next boundary and then quietly resurrect at the one after,
+  // so a Saturday tap of חול would hold every following Friday 09:00 for as long as
+  // the TV stayed on. A date-stamped segment key never recurs, so once `now` leaves
+  // the segment the override was cast in, it is gone for good.
+  const { screen: scheduled, key: segmentKey } = screenSegment(now);
+  const screen = override && override.segmentKey === segmentKey ? override.screen : scheduled;
+  const setScreen = (value) => setOverride({ screen: value, segmentKey });
 
   // Israel's wall clock and calendar, never the device's — see israelParts. A TV
   // whose timezone was set wrong at install must not read 16:43 above a זמנים panel

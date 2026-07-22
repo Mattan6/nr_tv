@@ -360,18 +360,37 @@ export function weeklyMinchaTime(thursdaySunsetIso) {
   return toClock(thursdaySunsetIso, -20);
 }
 
-// Which schedule the wall display should be showing at `now`. The TV stays powered
-// for weeks, so the screen has to follow the calendar rather than the boot moment.
-// שבת from Friday 09:00 through the end of Saturday; חול from Sunday 00:00.
-// Israel's calendar decides the boundary, not the device's: on a TV set to UTC the
-// device is still on Saturday at Israel's Sunday 00:00, and the screen would sit on
-// the Shabbat schedule for another two hours every week.
+// Which schedule the wall display should be showing at `now`, and *which run of that
+// schedule* — Israel's calendar, not the device's. The TV stays powered for weeks, so
+// the screen has to follow the calendar rather than the boot moment. שבת from Friday
+// 09:00 through the end of Saturday; חול from Sunday 00:00.
+//
+// The calendar therefore alternates between two kinds of segment:
+//
+//   חול   Sunday 00:00 → Friday 09:00
+//   שבת   Friday 09:00 → Sunday 00:00
+//
+// `key` names the *specific* segment `now` falls in — the screen plus the calendar
+// date the segment began on, e.g. "shabbat@2026-07-24" or "weekday@2026-07-26". It is
+// what a TopBar override is pinned to. Pinning to the screen *value* alone (the old
+// `insteadOf`) is not enough: 'shabbat' comes round again every single week, so an
+// override that merely stopped applying at the next boundary would silently resurrect
+// at the one after it, and every week thereafter. A date-stamped key can never recur.
 const SHABBAT_SCREEN_FROM_HOUR = 9; // Friday
-export function scheduledScreen(now) {
+export function screenSegment(now) {
   const p = israelParts(now);
-  if (p.weekday === 6) return 'shabbat';
-  if (p.weekday === 5) return p.hour >= SHABBAT_SCREEN_FROM_HOUR ? 'shabbat' : 'weekday';
-  return 'weekday';
+  let screen = 'weekday';
+  if (p.weekday === 6) screen = 'shabbat';
+  else if (p.weekday === 5 && p.hour >= SHABBAT_SCREEN_FROM_HOUR) screen = 'shabbat';
+  // Days back to the start of this segment: Sunday for a חול run; the Friday that
+  // opened it for a שבת run (today when it is Friday, yesterday when it is Saturday).
+  const back = screen === 'shabbat' ? p.weekday - 5 : p.weekday;
+  const start = israelDateAtNoon(p, -back);
+  return { screen, key: `${screen}@${localYmd(start)}` };
+}
+
+export function scheduledScreen(now) {
+  return screenSegment(now).screen;
 }
 
 // Finds the next prayer after `now` from a resolved `list` (uses each entry's
