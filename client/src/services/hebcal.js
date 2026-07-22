@@ -59,10 +59,14 @@ export const getHebrewDate = async (date = new Date()) => {
 };
 
 /**
- * Get Parasha (Torah portion) for this week
+ * Get Parasha (Torah portion), candle lighting and havdalah for this week.
+ * @param {number} [candleLightingMin=20] - Minutes before sunset for candle
+ *   lighting, sent as Hebcal's `b` parameter. Passed explicitly rather than left to
+ *   Hebcal's per-location default so the shul's posted time can only change when
+ *   this number does. The caller supplies it from SHABBAT_CONFIG.
  * @returns {Promise} Parasha information
  */
-export const getParasha = async () => {
+export const getParasha = async (candleLightingMin = 20) => {
   try {
     const response = await axios.get(`${HEBCAL_API_URL}/shabbat`, {
       params: {
@@ -71,6 +75,7 @@ export const getParasha = async () => {
         longitude: LOCATION.longitude,
         tzid: LOCATION.tzid,
         M: 'on', // Include parasha
+        b: candleLightingMin,
       },
     });
     return response.data;

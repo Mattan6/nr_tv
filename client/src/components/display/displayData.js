@@ -1,7 +1,6 @@
 // Static, editable content for the synagogue display dashboard.
 // (Prayer schedule, shiurim, announcements, mazal tov, azkarot, parnas, ticker.)
 // The zmanim panel is wired to live Hebcal data — see ZMANIM_ROWS below.
-import { format } from 'date-fns';
 
 // Weekday (חול) prayers. Each entry is one of:
 //   { time: 'HH:MM' }                     — a fixed clock time
@@ -23,6 +22,10 @@ export const WEEKDAY_PRAYERS = [
 // SOURCE of this object changes (static import → fetched state); the computation
 // below stays as-is.
 export const SHABBAT_CONFIG = {
+  // Minutes before שקיעה that הדלקת נרות is called. Sent to Hebcal as `b=` rather
+  // than left to its per-location default, so the posted time can only change when
+  // this number does.
+  candleLightingMinBeforeSunset: 20,
   kabbalatAfterCandlesMin: { summer: 2, winter: 5 },
   shacharit: { summer: '07:45', winter: '07:30' },
   minchaBeforeSunsetMin: 90,
@@ -89,15 +92,33 @@ export const PARNAS = {
 export const TICKER =
   'בית כנסת נווה רחמים  •  נא לכבד את קדושת בית הכנסת ולכבות את הטלפונים  •  נדבת משפחת בן חמו לעילוי נשמת משה בן פרטונה  •  לתרומות והנצחות פנו לגבאי · 054-848-7595  •  ';
 
-// Resolves prayer entries against today's zmanim into { name, time, clock }.
-// `time` is what to display (may be text like "מיד לאחר מנחה"); `clock` is the
-// 'HH:MM' used for ordering / countdown (null when there is no real time yet).
-function toClock(iso, offsetMin) {
+// Every clock time on the display is rendered in Israel's timezone, never the
+// device's. Season detection is already deliberately device-independent, so
+// formatting has to be too: on a panel misconfigured to Europe/Athens the computed
+// rows would otherwise all shift an hour while the fixed שחרית string stayed put —
+// a visibly self-contradicting panel. Built lazily so a runtime without the tz
+// database fails to one null time rather than to a blank module.
+let jerusalemClock = null;
+function formatJerusalem(date) {
+  if (!jerusalemClock) {
+    jerusalemClock = new Intl.DateTimeFormat('he-IL', {
+      timeZone: 'Asia/Jerusalem',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  }
+  return jerusalemClock.format(date);
+}
+
+// `offsetMin` is applied to the epoch, not to local calendar fields, so it can
+// never pick up an extra hour from a DST shift in the device's own timezone.
+export function toClock(iso, offsetMin) {
   if (!iso) return null;
   try {
-    const d = new Date(iso);
-    if (offsetMin) d.setMinutes(d.getMinutes() + offsetMin);
-    return format(d, 'HH:mm');
+    const ms = new Date(iso).getTime();
+    if (Number.isNaN(ms)) return null;
+    return formatJerusalem(new Date(ms + (offsetMin || 0) * 60000));
   } catch {
     return null;
   }

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { format } from 'date-fns';
 import { getZmanim, getParasha } from '../services/hebcal';
 import {
   WEEKDAY_PRAYERS,
@@ -18,6 +17,7 @@ import {
   upcomingSaturday,
   shabbatAnchors,
   resolveShabbatTimes,
+  toClock,
 } from '../components/display/displayData';
 import TopBar from '../components/display/TopBar';
 import PrayerTimesPanel from '../components/display/PrayerTimesPanel';
@@ -129,17 +129,11 @@ const SynagogueDisplay = () => {
   const prayersSub = isShab ? parasha || 'שבת קודש' : weekday;
   const next = computeNextMinyan(now, prayers);
 
-  const fmt = (iso) => {
-    if (!iso) return '--:--';
-    try {
-      return format(new Date(iso), 'HH:mm');
-    } catch {
-      return '--:--';
-    }
-  };
+  // Same Asia/Jerusalem formatter the prayer rows use, so the two panels can never
+  // disagree by an hour on a device whose timezone is set wrong.
   const zmanimRows = ZMANIM_ROWS.map((r) => ({
     name: r.name,
-    time: zmanimTimes ? fmt(zmanimTimes[r.field]) : '--:--',
+    time: (zmanimTimes && toClock(zmanimTimes[r.field])) || '--:--',
   }));
 
   const maz = MAZAL[mazIdx] || {};
