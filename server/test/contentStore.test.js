@@ -52,6 +52,44 @@ test('serves the seed and preserves the file when content.json is corrupt', asyn
   assert.strictEqual(errorMock.mock.calls.length, 1, 'expected exactly one loud log for the corrupt file');
 });
 
+test('a parseable but wrong-shaped content.json (missing a panel array) is quarantined and the seed served', async (t) => {
+  const { store, file } = await tmpStore(t);
+  await fs.writeFile(file, JSON.stringify({ version: 1 }), 'utf8');
+  const errorMock = t.mock.method(console, 'error', () => {});
+
+  const doc = await store.read();
+
+  assert.strictEqual(doc.shiurim.length, DEFAULT_CONTENT.shiurim.length);
+  assert.ok(Array.isArray(doc.announcements));
+  assert.ok(Array.isArray(doc.mazal));
+  assert.ok(Array.isArray(doc.azkarot));
+  // The wrong-shaped file may be hand-recoverable, so a read alone must leave it
+  // untouched — same guarantee as an unparseable file.
+  assert.strictEqual(JSON.parse(await fs.readFile(file, 'utf8')).version, 1);
+  assert.strictEqual(errorMock.mock.calls.length, 1, 'expected exactly one loud log for the wrong-shaped file');
+
+  await store.update((draft) => draft.shiurim.pop());
+  const dir = path.dirname(file);
+  const corruptEntries = (await fs.readdir(dir)).filter((name) => name.startsWith('content.json.corrupt-'));
+  assert.strictEqual(corruptEntries.length, 1, 'expected the wrong-shaped file to be quarantined on the next write');
+});
+
+test('a panel property present but not an array is treated the same as a missing one', async (t) => {
+  const { store, file } = await tmpStore(t);
+  await fs.writeFile(
+    file,
+    JSON.stringify({ version: 1, announcements: [], shiurim: 'not-an-array', mazal: [], azkarot: [] }),
+    'utf8'
+  );
+  const errorMock = t.mock.method(console, 'error', () => {});
+
+  const doc = await store.read();
+
+  assert.strictEqual(doc.shiurim.length, DEFAULT_CONTENT.shiurim.length);
+  assert.ok(Array.isArray(doc.shiurim));
+  assert.strictEqual(errorMock.mock.calls.length, 1, 'expected exactly one loud log for the wrong-shaped file');
+});
+
 test('the first write after a corrupt read preserves the corrupt file instead of destroying it', async (t) => {
   const { store, dir, file } = await tmpStore(t);
   await fs.writeFile(file, '{ this is not json', 'utf8');

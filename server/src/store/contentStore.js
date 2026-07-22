@@ -6,6 +6,21 @@ const DEFAULT_CONTENT = require('./defaultContent');
 // it to a 404.
 class NotFoundError extends Error {}
 
+// The four panel arrays every valid content.json must carry. A file that is valid
+// JSON but the wrong shape (e.g. `{"version":1}`, or a future migration that renamed
+// a key) must not be cached and served as-is — every route that does `draft[panel]`
+// or `.map`/`.push` on it would then throw or hand back `undefined`. Treat "wrong
+// shape" exactly like "unparseable": log it and quarantine the file.
+const PANEL_ARRAY_KEYS = ['announcements', 'shiurim', 'mazal', 'azkarot'];
+
+function shapeError(doc) {
+  if (doc === null || typeof doc !== 'object') return 'the document is not an object';
+  for (const key of PANEL_ARRAY_KEYS) {
+    if (!Array.isArray(doc[key])) return `"${key}" is missing or not an array`;
+  }
+  return null;
+}
+
 // The only module in the codebase that opens content.json.
 //
 // content.json is the display's entire content, so a truncated file is a blank TV.
@@ -49,18 +64,32 @@ function createContentStore(dir) {
   async function load() {
     if (cache) return cache;
     try {
-      cache = JSON.parse(await fs.readFile(file, 'utf8'));
+      const parsed = JSON.parse(await fs.readFile(file, 'utf8'));
+      const reason = shapeError(parsed);
+      if (reason) {
+        // Valid JSON, wrong shape — e.g. `{"version":1}`, or a panel key renamed by a
+        // future migration. JSON.parse alone can't catch this, so throw here to fall
+        // into the same catch block below and reuse its corrupt-file handling: log
+        // loudly, serve the seed, and quarantine the bad file on the next write
+        // instead of caching and serving it.
+        const err = new Error(`content.json has the wrong shape: ${reason}`);
+        err.code = 'BAD_SHAPE';
+        err.shapeReason = reason;
+        throw err;
+      }
+      cache = parsed;
     } catch (err) {
       cache = structuredClone(DEFAULT_CONTENT);
       if (err.code === 'ENOENT') {
         await persist(cache);
       } else {
-        // Don't touch the corrupt file here — it may be recoverable by hand. It
-        // survives until the next persist(), which renames it aside (see above)
-        // rather than overwriting it.
+        // Don't touch the corrupt/wrong-shaped file here — it may be recoverable by
+        // hand. It survives until the next persist(), which renames it aside (see
+        // above) rather than overwriting it.
         corruptPending = true;
+        const problem = err.code === 'BAD_SHAPE' ? `has the wrong shape (${err.shapeReason})` : `is unreadable (${err.message})`;
         console.error(
-          `⚠️  ${file} is unreadable (${err.message}). Serving defaults; the existing file will be preserved as content.json.corrupt-<timestamp> on the next write.`
+          `⚠️  ${file} ${problem}. Serving defaults; the existing file will be preserved as content.json.corrupt-<timestamp> on the next write.`
         );
       }
     }
