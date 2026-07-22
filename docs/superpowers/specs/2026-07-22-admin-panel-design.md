@@ -243,7 +243,7 @@ alongside them at a separate mount point.
 | Failure | Behavior |
 |---|---|
 | `content.json` missing | Seeded from `defaultContent.js` on first read |
-| `content.json` unparseable | Log loudly, serve the seed, do **not** overwrite the corrupt file — it may be recoverable by hand |
+| `content.json` unparseable | Log loudly, serve the seed; the corrupt file is left alone until the next write, then renamed aside to `content.json.corrupt-<timestamp>` (logged) instead of being overwritten — it may be recoverable by hand |
 | Crash mid-write | Atomic rename leaves the previous good file intact |
 | API unreachable from the TV | Last good content retained; `localStorage` covers a reboot |
 | API unreachable from the admin | Inline Hebrew error; form contents preserved |
