@@ -19,6 +19,8 @@ import {
   shabbatAnchors,
   resolveShabbatTimes,
   scheduledScreen,
+  israelParts,
+  israelToday,
   toClock,
 } from '../components/display/displayData';
 import TopBar from '../components/display/TopBar';
@@ -82,11 +84,17 @@ const SynagogueDisplay = () => {
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      const today = new Date();
-      const saturday = upcomingSaturday(today);
+      // All three dates come off Israel's calendar, not the device's: east of Israel
+      // `new Date()` has already rolled over for part of every evening, so "today's
+      // zmanim" would be tomorrow's and `upcomingSaturday` would skip to next week's
+      // Shabbat while the hall was still sitting in this one. Each helper takes the
+      // raw instant — they do the conversion themselves.
+      const instant = new Date();
+      const today = israelToday(instant);
+      const saturday = upcomingSaturday(instant);
       const [z, zThu, zSat, p] = await Promise.allSettled([
         getZmanim(today),
-        getZmanim(governingThursday(today)),
+        getZmanim(governingThursday(instant)),
         getZmanim(saturday),
         getParasha(SHABBAT_CONFIG.candleLightingMinBeforeSunset),
       ]);
@@ -127,14 +135,19 @@ const SynagogueDisplay = () => {
   const screen = override && override.insteadOf === scheduled ? override.screen : scheduled;
   const setScreen = (value) => setOverride({ screen: value, insteadOf: scheduled });
 
-  const clock = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  // Israel's wall clock and calendar, never the device's — see israelParts. A TV
+  // whose timezone was set wrong at install must not read 16:43 above a זמנים panel
+  // posting שקיעה 19:43.
+  const nowIL = israelParts(now);
+  const clock = `${pad(nowIL.hour)}:${pad(nowIL.minute)}:${pad(nowIL.second)}`;
   let hebDate = '';
   let greg = '';
   let weekday = '';
   try {
-    hebDate = new Intl.DateTimeFormat('he-u-ca-hebrew', { day: 'numeric', month: 'long', year: 'numeric' }).format(now);
-    greg = new Intl.DateTimeFormat('he', { day: 'numeric', month: 'long', year: 'numeric' }).format(now);
-    weekday = new Intl.DateTimeFormat('he', { weekday: 'long' }).format(now);
+    const dateOpts = { timeZone: 'Asia/Jerusalem', day: 'numeric', month: 'long', year: 'numeric' };
+    hebDate = new Intl.DateTimeFormat('he-u-ca-hebrew', dateOpts).format(now);
+    greg = new Intl.DateTimeFormat('he', dateOpts).format(now);
+    weekday = new Intl.DateTimeFormat('he', { timeZone: 'Asia/Jerusalem', weekday: 'long' }).format(now);
   } catch {
     /* Intl calendar unsupported — leave header dates blank */
   }

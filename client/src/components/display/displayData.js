@@ -97,7 +97,9 @@ export const TICKER =
   'בית כנסת נווה רחמים  •  נא לכבד את קדושת בית הכנסת ולכבות את הטלפונים  •  נדבת משפחת בן חמו לעילוי נשמת משה בן פרטונה  •  לתרומות והנצחות פנו לגבאי · 054-848-7595  •  ';
 
 // Every clock time on the display is rendered in Israel's timezone, never the
-// device's. Season detection is already deliberately device-independent, so
+// device's — the prayer rows and זמנים rows through `toClock` below, and the header
+// clock, the header dates, the countdown and the schedule boundary through
+// `israelParts`. Season detection is already deliberately device-independent, so
 // formatting has to be too: on a panel misconfigured to Europe/Athens the computed
 // rows would otherwise all shift an hour while the fixed שחרית string stayed put —
 // a visibly self-contradicting panel. Built lazily so a runtime without the tz
@@ -113,6 +115,86 @@ function formatJerusalem(date) {
     });
   }
   return jerusalemClock.format(date);
+}
+
+// The display's own notion of "now": the wall clock, the calendar date and the
+// weekday as they read in Nitzan, never as they read on the TV's own clock.
+// Everything that asks "what time is it" goes through here — the header clock, the
+// header date strings, the מניין הבא countdown, the Friday/Sunday schedule boundary
+// and the Saturday/Thursday anchors — so a panel whose timezone was set wrong at
+// install cannot show 16:43 in the clock while the זמנים rows post שקיעה 19:43.
+//
+// `ms` is read straight off the Date because milliseconds are the same in every
+// zone. `weekday` is derived from the Israel calendar date through a UTC Date, so
+// the device's zone cannot nudge it either.
+//
+// Falls back to the device's own fields if the runtime has no tz database: that
+// degrades to the pre-Israel-time behaviour rather than throwing and blanking the
+// whole screen.
+let israelPartsFormat = null;
+export function israelParts(date) {
+  const d = date instanceof Date ? date : new Date(date);
+  const ms = Number.isNaN(d.getTime()) ? 0 : d.getMilliseconds();
+  try {
+    if (!israelPartsFormat) {
+      israelPartsFormat = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Jerusalem',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      });
+    }
+    const f = {};
+    for (const p of israelPartsFormat.formatToParts(d)) f[p.type] = p.value;
+    const year = Number(f.year);
+    const month = Number(f.month);
+    const day = Number(f.day);
+    // Some ICU builds render midnight as hour 24 under hour12:false.
+    const hour = Number(f.hour) % 24;
+    const minute = Number(f.minute);
+    const second = Number(f.second);
+    if (![year, month, day, hour, minute, second].every(Number.isFinite)) throw new Error('unparsable');
+    return {
+      year,
+      month,
+      day,
+      hour,
+      minute,
+      second,
+      ms,
+      weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay(),
+    };
+  } catch {
+    return {
+      year: d.getFullYear(),
+      month: d.getMonth() + 1,
+      day: d.getDate(),
+      hour: d.getHours(),
+      minute: d.getMinutes(),
+      second: d.getSeconds(),
+      ms,
+      weekday: d.getDay(),
+    };
+  }
+}
+
+// A device-local Date whose calendar fields spell out an Israel calendar date,
+// shifted by `dayShift` days. The consumers of these dates — date-fns `format` in
+// the Hebcal service and `localYmd` below — both read local fields, so this is the
+// shape they need. Noon rather than midnight, so a DST jump in the *device's* own
+// zone cannot slide the date back a day.
+function israelDateAtNoon(parts, dayShift = 0) {
+  return new Date(parts.year, parts.month - 1, parts.day + dayShift, 12, 0, 0, 0);
+}
+
+// Israel's current calendar day, as a Date the Hebcal service can format. On a TV
+// east of Israel, `new Date()` is already tomorrow for part of every evening.
+export function israelToday(now) {
+  return israelDateAtNoon(israelParts(now));
 }
 
 // `offsetMin` is applied to the epoch, not to local calendar fields, so it can
@@ -196,31 +278,30 @@ export function resolvePrayers(entries, zmanimTimes, computed = {}) {
 // The Thursday whose sunset governs this week's מנחה. מנחה is refreshed each
 // Friday for the week ending on the following Thursday, so from any day we look
 // forward to that week's Thursday. (Weekday מנחה isn't shown Fri/Sat anyway.)
+// Counted off Israel's weekday, not the device's.
 export function governingThursday(now) {
-  const d = new Date(now);
-  d.setHours(0, 0, 0, 0);
-  const daysSinceFriday = (d.getDay() - 5 + 7) % 7; // Fri = 5
-  const friday = new Date(d);
-  friday.setDate(d.getDate() - daysSinceFriday);
-  const thursday = new Date(friday);
-  thursday.setDate(friday.getDate() + 6);
-  return thursday;
+  const p = israelParts(now);
+  const daysSinceFriday = (p.weekday - 5 + 7) % 7; // Fri = 5
+  return israelDateAtNoon(p, 6 - daysSinceFriday);
 }
 
 // The Saturday of the current Shabbat: today if today is Saturday, else the next
 // one. The Shabbat panel is reachable any weekday via the TopBar toggle, so מנחה
 // must anchor to that Saturday's שקיעה, not to today's.
+//
+// Israel's weekday again: on a TV set to Pacific/Auckland this is called at 04:43
+// on the device's Sunday while Nitzan is still at Saturday 19:43, and the device's
+// own calendar would answer with *next* Saturday — blanking every candle/havdalah
+// row while שחרית and מנחה quietly described the wrong Shabbat.
 export function upcomingSaturday(now) {
-  const d = new Date(now);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7));
-  return d;
+  const p = israelParts(now);
+  return israelDateAtNoon(p, (6 - p.weekday + 7) % 7);
 }
 
-// Israel-local calendar date ('YYYY-MM-DD') of a Date, for comparing against the
-// first ten characters of a Hebcal timestamp. Built from the date's own fields
-// rather than toISOString(), which would answer in UTC and slide a day backwards
-// for anything before 02:00/03:00 local.
+// Calendar date ('YYYY-MM-DD') of one of the Israel-anchored Dates above, for
+// comparing against the first ten characters of a Hebcal timestamp. Built from the
+// date's own fields rather than toISOString(), which would answer in UTC and slide a
+// day backwards for anything before 02:00/03:00 local.
 function localYmd(d) {
   const pad2 = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -282,11 +363,14 @@ export function weeklyMinchaTime(thursdaySunsetIso) {
 // Which schedule the wall display should be showing at `now`. The TV stays powered
 // for weeks, so the screen has to follow the calendar rather than the boot moment.
 // שבת from Friday 09:00 through the end of Saturday; חול from Sunday 00:00.
+// Israel's calendar decides the boundary, not the device's: on a TV set to UTC the
+// device is still on Saturday at Israel's Sunday 00:00, and the screen would sit on
+// the Shabbat schedule for another two hours every week.
 const SHABBAT_SCREEN_FROM_HOUR = 9; // Friday
 export function scheduledScreen(now) {
-  const day = now.getDay();
-  if (day === 6) return 'shabbat';
-  if (day === 5) return now.getHours() >= SHABBAT_SCREEN_FROM_HOUR ? 'shabbat' : 'weekday';
+  const p = israelParts(now);
+  if (p.weekday === 6) return 'shabbat';
+  if (p.weekday === 5) return p.hour >= SHABBAT_SCREEN_FROM_HOUR ? 'shabbat' : 'weekday';
   return 'weekday';
 }
 
@@ -302,14 +386,17 @@ export function scheduledScreen(now) {
 export function computeNextMinyan(now, list) {
   const timed = list.filter((it) => it.clock);
   if (!timed.length) return { name: '', time: '', countdown: '--:--:--' };
-  const mins = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+  // Israel's wall clock and weekday: the rows are Israel times, so the "is it still
+  // ahead of us?" comparison has to be made against the same clock they are on.
+  const p = israelParts(now);
+  const mins = p.hour * 60 + p.minute + p.second / 60;
   const clockMins = (it) => {
     const [h, m] = it.clock.split(':').map(Number);
     return h * 60 + m;
   };
   const onDay = (d) => timed.filter((it) => it.day == null || it.day === d);
 
-  const today = now.getDay();
+  const today = p.weekday;
   let target = onDay(today).find((it) => clockMins(it) > mins) || null;
   let daysAhead = 0;
   for (let i = 1; i <= 7 && !target; i += 1) {
@@ -321,11 +408,13 @@ export function computeNextMinyan(now, list) {
   }
   if (!target) return { name: '', time: '', countdown: '--:--:--' };
 
-  const base = new Date(now);
   const [h, m] = target.clock.split(':').map(Number);
-  base.setDate(base.getDate() + daysAhead);
-  base.setHours(h, m, 0, 0);
-  const diff = Math.max(0, Math.floor((base - now) / 1000));
+  // Wall-clock arithmetic on Israel's clock, the same shape the device-local version
+  // used: minutes-of-day plus whole days. (It therefore carries the same pre-existing
+  // approximation across a DST shift in a multi-day roll-forward.)
+  const diffMs =
+    (daysAhead * 1440 + h * 60 + m) * 60000 - ((p.hour * 60 + p.minute) * 60000 + p.second * 1000 + p.ms);
+  const diff = Math.max(0, Math.floor(diffMs / 1000));
   const pad = (n) => String(n).padStart(2, '0');
   const countdown = `${pad(Math.floor(diff / 3600))}:${pad(Math.floor((diff % 3600) / 60))}:${pad(diff % 60)}`;
   return { name: target.name, time: target.clock, countdown };
