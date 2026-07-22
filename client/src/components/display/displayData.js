@@ -19,6 +19,16 @@ export const WEEKDAY_PRAYERS = [
   { name: 'ערבית', text: 'מיד לאחר מנחה', afterName: 'מנחה' },
 ];
 
+// Every tunable Shabbat value in one place. When the admin panel lands, only the
+// SOURCE of this object changes (static import → fetched state); the computation
+// below stays as-is.
+export const SHABBAT_CONFIG = {
+  kabbalatAfterCandlesMin: { summer: 2, winter: 5 },
+  shacharit: { summer: '07:45', winter: '07:30' },
+  minchaBeforeSunsetMin: 90,
+  arvitBeforeHavdalahMin: { summer: 3, winter: 10 },
+};
+
 export const SHABBAT_PRAYERS = [
   { name: 'הדלקת נרות', time: '18:21' },
   { name: 'מנחה וקבלת שבת', time: '18:26' },
@@ -93,6 +103,32 @@ function toClock(iso, offsetMin) {
   }
 }
 
+// שעון קיץ vs שעון חורף, decided by Israel's real UTC offset on the anchor date.
+// Deliberately NOT from the device clock: a display panel with a misconfigured
+// timezone would otherwise show winter times all summer, silently and forever.
+// Hebcal timestamps carry the offset, e.g. "2026-07-24T19:15:00+03:00".
+export function isSummerTime(iso) {
+  if (typeof iso === 'string') {
+    const m = iso.match(/([+-])(\d{2}):?(\d{2})$/);
+    if (m) {
+      const sign = m[1] === '-' ? -1 : 1;
+      return sign * (Number(m[2]) * 60 + Number(m[3])) === 180;
+    }
+  }
+  // Fallback for a "Z" or date-only string: ask Intl for Jerusalem's offset then.
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return false;
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Jerusalem',
+      timeZoneName: 'shortOffset',
+    }).formatToParts(d);
+    return parts.find((p) => p.type === 'timeZoneName')?.value === 'GMT+3';
+  } catch {
+    return false;
+  }
+}
+
 export function resolvePrayers(entries, zmanimTimes, computed = {}) {
   const base = entries.map((e) => {
     let clock = null;
@@ -125,6 +161,16 @@ export function governingThursday(now) {
   const thursday = new Date(friday);
   thursday.setDate(friday.getDate() + 6);
   return thursday;
+}
+
+// The Saturday of the current Shabbat: today if today is Saturday, else the next
+// one. The Shabbat panel is reachable any weekday via the TopBar toggle, so מנחה
+// must anchor to that Saturday's שקיעה, not to today's.
+export function upcomingSaturday(now) {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7));
+  return d;
 }
 
 // מנחה = the governing Thursday's sunset minus 20 minutes, fixed for the week.
