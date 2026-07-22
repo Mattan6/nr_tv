@@ -18,6 +18,7 @@ import {
   upcomingSaturday,
   shabbatAnchors,
   resolveShabbatTimes,
+  scheduledScreen,
   toClock,
 } from '../components/display/displayData';
 import TopBar from '../components/display/TopBar';
@@ -31,12 +32,12 @@ import Ticker from '../components/display/Ticker';
 const ROTATE_MS = 6500;
 const ZMANIM_REFRESH_MS = 21600000; // 6 hours
 
-// Friday (5) and Saturday (6) default to the Shabbat schedule.
-const isShabbatDay = (d) => d.getDay() === 5 || d.getDay() === 6;
 const pad = (n) => String(n).padStart(2, '0');
 
 const SynagogueDisplay = () => {
-  const [screen, setScreen] = useState(() => (isShabbatDay(new Date()) ? 'shabbat' : 'weekday'));
+  // null = follow the calendar; { screen, insteadOf } = a TopBar override, live only
+  // while `insteadOf` is still the scheduled screen. See below.
+  const [override, setOverride] = useState(null);
   const [now, setNow] = useState(() => new Date());
   const [scale, setScale] = useState(1);
   const [annIdx, setAnnIdx] = useState(0);
@@ -113,6 +114,18 @@ const SynagogueDisplay = () => {
       clearInterval(id);
     };
   }, []);
+
+  // Follow the calendar: שבת from Friday 09:00, back to חול at Sunday 00:00. The TV
+  // stays powered for weeks, so a page opened on Tuesday must not still be showing
+  // weekday times on Shabbat.
+  //
+  // A TopBar tap records which schedule it was overriding rather than replacing the
+  // screen outright. The override therefore holds for as long as that schedule does
+  // — it cannot be stomped by the next one-second tick — and is dropped the moment
+  // the schedule actually transitions.
+  const scheduled = scheduledScreen(now);
+  const screen = override && override.insteadOf === scheduled ? override.screen : scheduled;
+  const setScreen = (value) => setOverride({ screen: value, insteadOf: scheduled });
 
   const clock = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   let hebDate = '';

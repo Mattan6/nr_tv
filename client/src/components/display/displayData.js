@@ -35,12 +35,16 @@ export const SHABBAT_CONFIG = {
 // Five rows, all resolved by resolveShabbatTimes below. סוף זמן ק״ש and מנחה גדולה
 // were dropped — both already appear in the זמנים panel — and שיעור בפרשה moved to
 // the שיעורים panel.
+//
+// `day` (0 = Sunday … 6 = Saturday) marks which day each row happens on. The list
+// spans two days, so without it computeNextMinyan would offer Friday's הדלקת נרות
+// to a hall sitting in shul on Saturday morning.
 export const SHABBAT_PRAYERS = [
-  { name: 'הדלקת נרות', computed: 'shabCandles' },
-  { name: 'מנחה וקבלת שבת', computed: 'shabKabbalat' },
-  { name: 'שחרית', computed: 'shabShacharit' },
-  { name: 'מנחה', computed: 'shabMincha' },
-  { name: 'ערבית מוצ״ש', computed: 'shabArvit' },
+  { name: 'הדלקת נרות', computed: 'shabCandles', day: 5 },
+  { name: 'מנחה וקבלת שבת', computed: 'shabKabbalat', day: 5 },
+  { name: 'שחרית', computed: 'shabShacharit', day: 6 },
+  { name: 'מנחה', computed: 'shabMincha', day: 6 },
+  { name: 'ערבית מוצ״ש', computed: 'shabArvit', day: 6 },
 ];
 
 // Maps each displayed zman to its Hebcal `times` field. Times come live from
@@ -185,7 +189,7 @@ export function resolvePrayers(entries, zmanimTimes, computed = {}) {
       const ref = base.find((x) => x.name === e.afterName);
       clock = ref ? ref.clock : null;
     }
-    return { name: e.name, time: e.text || clock || '--:--', clock };
+    return { name: e.name, time: e.text || clock || '--:--', clock, day: e.day };
   });
 }
 
@@ -275,31 +279,52 @@ export function weeklyMinchaTime(thursdaySunsetIso) {
   return toClock(thursdaySunsetIso, -20);
 }
 
+// Which schedule the wall display should be showing at `now`. The TV stays powered
+// for weeks, so the screen has to follow the calendar rather than the boot moment.
+// שבת from Friday 09:00 through the end of Saturday; חול from Sunday 00:00.
+const SHABBAT_SCREEN_FROM_HOUR = 9; // Friday
+export function scheduledScreen(now) {
+  const day = now.getDay();
+  if (day === 6) return 'shabbat';
+  if (day === 5) return now.getHours() >= SHABBAT_SCREEN_FROM_HOUR ? 'shabbat' : 'weekday';
+  return 'weekday';
+}
+
 // Finds the next prayer after `now` from a resolved `list` (uses each entry's
-// `clock`) and returns its name, clock time, and an HH:MM:SS countdown. If none
-// remain today, rolls to the first one tomorrow.
+// `clock`) and returns its name, clock time, and an HH:MM:SS countdown.
+//
+// Entries may carry `day` (0 = Sunday … 6 = Saturday) when the list spans more than
+// one day, as the Shabbat schedule does: only entries belonging to the current day
+// are candidates today, and when none of them remain we roll forward to the next day
+// that has any. An entry without `day` belongs to every day, so an untagged list —
+// the weekday schedule — behaves exactly as it always has: the first entry later
+// than now, else the first entry tomorrow.
 export function computeNextMinyan(now, list) {
   const timed = list.filter((it) => it.clock);
   if (!timed.length) return { name: '', time: '', countdown: '--:--:--' };
   const mins = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
-  let target = null;
-  for (const it of timed) {
+  const clockMins = (it) => {
     const [h, m] = it.clock.split(':').map(Number);
-    if (h * 60 + m > mins) {
-      target = it;
-      break;
+    return h * 60 + m;
+  };
+  const onDay = (d) => timed.filter((it) => it.day == null || it.day === d);
+
+  const today = now.getDay();
+  let target = onDay(today).find((it) => clockMins(it) > mins) || null;
+  let daysAhead = 0;
+  for (let i = 1; i <= 7 && !target; i += 1) {
+    const later = onDay((today + i) % 7);
+    if (later.length) {
+      target = later[0];
+      daysAhead = i;
     }
   }
+  if (!target) return { name: '', time: '', countdown: '--:--:--' };
+
   const base = new Date(now);
-  if (target) {
-    const [h, m] = target.clock.split(':').map(Number);
-    base.setHours(h, m, 0, 0);
-  } else {
-    target = timed[0];
-    const [h, m] = target.clock.split(':').map(Number);
-    base.setDate(base.getDate() + 1);
-    base.setHours(h, m, 0, 0);
-  }
+  const [h, m] = target.clock.split(':').map(Number);
+  base.setDate(base.getDate() + daysAhead);
+  base.setHours(h, m, 0, 0);
   const diff = Math.max(0, Math.floor((base - now) / 1000));
   const pad = (n) => String(n).padStart(2, '0');
   const countdown = `${pad(Math.floor(diff / 3600))}:${pad(Math.floor((diff % 3600) / 60))}:${pad(diff % 60)}`;
