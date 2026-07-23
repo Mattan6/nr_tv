@@ -1,37 +1,29 @@
 # פאנל ניהול תוכן — Design
 
 **Date:** 2026-07-22
-**Status:** Approved — partially shipped, see "Implementation status" below.
+**Status:** Approved — fully shipped, see "Implementation status" below.
 **Scope:** An admin panel at `/adminGabbai` letting the gabbai edit the four content
 panels of the synagogue display — הודעות, שיעורי תורה, שמחות ומזל טוב, לעילוי נשמת —
 from his phone, without touching code.
 
 ## Implementation status
 
-This spec describes the full design, but plan Task 5 ("Display reads content from the
-server") was deliberately split in two, because another session was concurrently
-rewriting `client/src/pages/SynagogueDisplay.jsx` and
-`client/src/components/display/displayData.js` on `feature/shabbat-prayer-times` at the
-same time this branch was implemented:
+The whole design is now shipped. Plan Task 5 ("Display reads content from the server")
+was originally split in two, because another session was concurrently rewriting
+`client/src/pages/SynagogueDisplay.jsx` and `client/src/components/display/displayData.js`
+on `feature/shabbat-prayer-times`. That shabbat work has since merged to `master`, and
+the deferred half was then completed against the current files.
 
 - **Shipped**: the content store, the panel schema, the `/api/content` REST API, the
   client API wrapper `client/src/services/content.js`, and the full admin UI
-  (`client/src/pages/admin/`). The gabbai can open `/adminGabbai` and edit content
-  today, and every write correctly lands in `server/data/content.json`.
-- **Not shipped**: `useDisplayContent()` (plan Task 5, Steps 2–8) and the
-  corresponding edits to `SynagogueDisplay.jsx` / `displayData.js`. The TV display does
-  **not** read from `/api/content` yet — it still renders the static arrays in
-  `displayData.js`. Consequently the seed content exists **twice**: once in
-  `server/src/store/defaultContent.js` (served by the API, edited via the admin panel)
-  and once, unchanged, in `displayData.js` (what the TV actually shows). A save in
-  `/adminGabbai` does not reach the TV.
-  - The **"Display wiring"** section below and **verification steps 4–8** describe the
-    not-yet-shipped behavior — treat them as the spec for the deferred half, not as a
-    description of what runs today.
-  - **Whoever picks up the deferred half**: `SynagogueDisplay.jsx` has changed
-    underneath the plan since it was written. Re-read the plan's Task 5, Steps 5–8
-    quoted code against the real current file before applying it — the line numbers
-    and surrounding code will have moved.
+  (`client/src/pages/admin/`). The gabbai opens `/adminGabbai`, edits content, and every
+  write lands in `server/data/content.json`.
+- **Shipped (the formerly-deferred half)**: `client/src/hooks/useDisplayContent.js`
+  polls `/api/content` every 30s; `SynagogueDisplay.jsx` renders the four panels from
+  it; and the four static arrays were removed from `displayData.js` so the seed lives
+  only in `server/src/store/defaultContent.js`. A save in `/adminGabbai` reaches the TV
+  within 30 seconds, verified end to end in a browser.
+  - The **"Display wiring"** section below now describes what actually runs.
 
 ## Problem
 
@@ -162,11 +154,11 @@ is unchanged — `AnnouncementsPanel` already sets `white-space: pre-line`.
 
 ### Removal from `displayData.js`
 
-The four constants are meant to be **deleted**, once the deferred half of Task 5 lands
-(see "Implementation status" at the top) — the seed module becomes the single source,
-so there is no second copy to drift. **As shipped so far, they are still present and
-still what the TV actually renders**; only the admin/API side of this design has been
-built. The prayer, zmanim, and Shabbat logic in that file is untouched either way.
+The four constants (`SHIURIM`, `ANNOUNCEMENTS`, `MAZAL`, `AZKAROT`) have been **deleted**
+from `displayData.js` — the seed module (`server/src/store/defaultContent.js`) is now the
+single source, so there is no second copy to drift, and the TV renders what the API
+serves. `PARNAS` and `TICKER` stay static (no admin panel for them yet). The prayer,
+zmanim, and Shabbat logic in that file is untouched.
 
 ## API — `/api/content`
 

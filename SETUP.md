@@ -234,10 +234,17 @@ boot from `server/src/store/defaultContent.js`. Back it up by copying that one f
 The store caches the file in memory, so **editing `content.json` by hand requires a
 server restart.** Edit through the admin panel instead wherever possible.
 
-⚠️ **Not wired up yet**: the display screen (`SynagogueDisplay.jsx`) still reads its
-הודעות, שיעורי תורה, שמחות ומזל טוב and לעילוי נשמת from a static file
-(`displayData.js`), not from `/api/content`. Saving a change in the admin panel updates
-`content.json` correctly, but it does **not** yet reach the TV — the display still shows
-the old static content until this connection is built. Whoever wires the display to
-`/api/content` should update this paragraph to describe the real refresh behavior
-(polling interval, reachability fallback) once it ships.
+The display screen re-fetches `/api/content` every **30 seconds** (via
+`client/src/hooks/useDisplayContent.js`), so a change saved in the admin panel reaches
+the TV within half a minute — no need to touch the TV, which is opened once and left
+running. Only `isActive` items are shown; hidden ones stay off the screen.
+
+If the server is briefly unreachable, the display keeps showing the last content it saw
+rather than blanking, and it caches that content to the browser so even a TV reboot
+during an outage still has something to show.
+
+Note: after changing any client source or `client/.env`, the Vite dev server must be
+restarted (`npm run dev`) for the change to reach an already-open browser — a page that
+has been open since before the change will otherwise keep running the old code.
+
+Still static (no admin panel yet): פרנס היום, the ticker, and prayer/zmanim times.

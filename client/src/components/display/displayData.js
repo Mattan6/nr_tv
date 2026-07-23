@@ -62,31 +62,10 @@ export const ZMANIM_ROWS = [
   { name: 'צאת ר״ת', field: 'tzeit72min' },
 ];
 
-export const SHIURIM = [
-  { name: 'דף היומי', time: '06:45', by: 'הרב יגאל' },
-  { name: 'הלכה יומית', time: '13:15', by: 'הרב מוטה' },
-  { name: 'עין יעקב', time: '17:30', by: 'הרב שלום' },
-  { name: 'שיעור לנשים', time: '16:45', by: 'הרב ורהפטיג' },
-  { name: 'שיעור הלכה', time: '20:00', by: 'הרב יגאל' },
-];
-
-export const ANNOUNCEMENTS = [
-  'שיעורו של הרב מוטה יתקיים הערב\nבשעה 20:00 בבית המדרש',
-  'יישר כח למשפחת פרידמן\nעל תרומת המעקה לבימת הכהנים',
-  'ניתן להירשם לשיעור הדף היומי\nאצל הגבאי · 054-848-7595',
-];
-
-export const MAZAL = [
-  { names: 'משפחת בן חמו', occasion: 'להולדת הבן — מזל טוב!' },
-  { names: 'משפחת אזולאי', occasion: 'לרגל האירוסין — בשעה טובה' },
-  { names: 'ר׳ יוסי נעים הי״ו', occasion: 'לרגל יום ההולדת' },
-];
-
-export const AZKAROT = [
-  { name: 'משה בן פרטונה ז״ל', detail: 'נתרם ע״י יעל ורמון בראון', date: 'י״ח באלול' },
-  { name: 'חנה נינט ריין בת פרטונה ז״ל', detail: 'תנצב״ה', date: "ה' בתמוז" },
-  { name: 'רוברט ישראל בן רוזי ז״ל', detail: 'לעילוי נשמת', date: 'כ״ג בטבת' },
-];
+// שיעורים / הודעות / מזל טוב / אזכרות are no longer static — they are edited in
+// /adminGabbai and served from the API. Seed values live in
+// server/src/store/defaultContent.js; the display fetches them via useDisplayContent.
+// PARNAS and TICKER below stay static for now (no admin panel for them yet).
 
 export const PARNAS = {
   name: 'הרב יחזקאל ישעי שליט״א',

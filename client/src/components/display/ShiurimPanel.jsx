@@ -5,7 +5,7 @@ const ShiurimPanel = ({ shiurim }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '12px', flex: 1, justifyContent: 'space-between' }}>
       {shiurim.map((s) => (
         <div
-          key={`${s.name}-${s.time}`}
+          key={s.id}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 6px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
         >
           <div>

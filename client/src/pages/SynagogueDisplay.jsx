@@ -5,10 +5,6 @@ import {
   SHABBAT_PRAYERS,
   SHABBAT_CONFIG,
   ZMANIM_ROWS,
-  SHIURIM,
-  ANNOUNCEMENTS,
-  MAZAL,
-  AZKAROT,
   PARNAS,
   TICKER,
   resolvePrayers,
@@ -30,6 +26,7 @@ import ShiurimPanel from '../components/display/ShiurimPanel';
 import AnnouncementsPanel from '../components/display/AnnouncementsPanel';
 import { NextMinyanPanel, ParnasPanel, MazalPanel, AzkarotPanel } from '../components/display/CenterCards';
 import Ticker from '../components/display/Ticker';
+import useDisplayContent from '../hooks/useDisplayContent';
 
 const ROTATE_MS = 6500;
 const ZMANIM_REFRESH_MS = 21600000; // 6 hours
@@ -42,9 +39,12 @@ const SynagogueDisplay = () => {
   const [override, setOverride] = useState(null);
   const [now, setNow] = useState(() => new Date());
   const [scale, setScale] = useState(1);
-  const [annIdx, setAnnIdx] = useState(0);
-  const [mazIdx, setMazIdx] = useState(0);
-  const [azkIdx, setAzkIdx] = useState(0);
+  // One counter, not three: the three rotating panels have always advanced in
+  // lockstep. The modulo is taken at render time against the CURRENT list (see
+  // `pick`), because the lists are editable now (via /adminGabbai) and a list that
+  // shrinks must not leave an index pointing past its end.
+  const [tick, setTick] = useState(0);
+  const { announcements, shiurim, mazal, azkarot } = useDisplayContent();
   const [zmanimTimes, setZmanimTimes] = useState(null);
   const [minchaTime, setMinchaTime] = useState(null);
   const [shabbatTimes, setShabbatTimes] = useState({});
@@ -64,13 +64,10 @@ const SynagogueDisplay = () => {
     return () => clearInterval(t);
   }, []);
 
-  // Rotate announcements / mazal / azkarot.
+  // Rotate announcements / mazal / azkarot. The counter only ever increases; the
+  // modulo is taken at render time against the current list (see `pick`).
   useEffect(() => {
-    const r = setInterval(() => {
-      setAnnIdx((i) => (i + 1) % ANNOUNCEMENTS.length);
-      setMazIdx((i) => (i + 1) % MAZAL.length);
-      setAzkIdx((i) => (i + 1) % AZKAROT.length);
-    }, ROTATE_MS);
+    const r = setInterval(() => setTick((t) => t + 1), ROTATE_MS);
     return () => clearInterval(r);
   }, []);
 
@@ -178,8 +175,12 @@ const SynagogueDisplay = () => {
     time: (zmanimTimes && toClock(zmanimTimes[r.field])) || '--:--',
   }));
 
-  const maz = MAZAL[mazIdx] || {};
-  const azk = AZKAROT[azkIdx] || {};
+  // Advance through each list with one shared counter; an empty list yields null so
+  // its panel renders a quiet placeholder rather than crashing.
+  const pick = (list) => (list.length ? list[tick % list.length] : null);
+  const ann = pick(announcements);
+  const maz = pick(mazal) || {};
+  const azk = pick(azkarot) || {};
 
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#070a10' }}>
@@ -235,21 +236,21 @@ const SynagogueDisplay = () => {
 
             {/* Center */}
             <div style={{ display: 'grid', gridTemplateRows: '1.02fr 0.98fr 1fr', gap: '20px', minHeight: 0 }}>
-              <AnnouncementsPanel ann={ANNOUNCEMENTS[annIdx]} annKey={annIdx} />
+              <AnnouncementsPanel ann={ann?.text || ''} annKey={tick} />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', minHeight: 0 }}>
                 <NextMinyanPanel next={next} />
                 <ParnasPanel parnas={PARNAS} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', minHeight: 0 }}>
-                <MazalPanel maz={maz} mazKey={mazIdx} />
-                <AzkarotPanel azk={azk} azkKey={azkIdx} />
+                <MazalPanel maz={maz} mazKey={tick} />
+                <AzkarotPanel azk={azk} azkKey={tick} />
               </div>
             </div>
 
             {/* Left: zmanim + shiurim */}
             <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: '20px', minHeight: 0 }}>
               <ZmanimPanel rows={zmanimRows} />
-              <ShiurimPanel shiurim={SHIURIM} />
+              <ShiurimPanel shiurim={shiurim} />
             </div>
           </div>
 
