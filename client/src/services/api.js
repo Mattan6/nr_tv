@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// "localhost" is whatever device is *viewing* the page — on the TV or the gabbai's
+// phone that is the TV or the phone, not the server. Default to the host the page
+// was served from, which is the machine running both processes. Override with
+// VITE_API_URL only when the API lives somewhere else entirely.
+const API_URL =
+  import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
