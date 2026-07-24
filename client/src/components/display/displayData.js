@@ -18,6 +18,14 @@ export const WEEKDAY_PRAYERS = [
   { name: 'ערבית', text: 'מיד לאחר מנחה', afterName: 'מנחה' },
 ];
 
+// צאת הכוכבים as this shul reckons it: a fixed 18 minutes after שקיעה, in every
+// season. Deliberately NOT one of Hebcal's own tzeit fields — `tzeit85deg` (sun 8.5°
+// below the horizon) is the one the זמנים panel used to read, and it runs 22 minutes
+// later than this in July — so the row is computed off `sunset` instead of read off
+// the response. Exported because /zmanim posts the same zman and must post the same
+// number; it is also the anchor summer's ערבית מוצ״ש counts back from.
+export const TZEIT_AFTER_SUNSET_MIN = 18;
+
 // Every tunable Shabbat value in one place. When the admin panel lands, only the
 // SOURCE of this object changes (static import → fetched state); the computation
 // below stays as-is.
@@ -29,7 +37,16 @@ export const SHABBAT_CONFIG = {
   kabbalatAfterCandlesMin: { summer: 2, winter: 5 },
   shacharit: { summer: '07:45', winter: '07:30' },
   minchaBeforeSunsetMin: 90,
-  arvitBeforeHavdalahMin: { summer: 3, winter: 10 },
+  tzeitAfterSunsetMin: TZEIT_AFTER_SUNSET_MIN,
+  // ערבית מוצ״ש counts back from a DIFFERENT anchor in each season, which is why this
+  // is a rule per season and not one number per season: קיץ from צאת הכוכבים
+  // (שקיעה + tzeitAfterSunsetMin), חורף from Hebcal's הבדלה (8.5°), which falls later
+  // than צאת. Flattening both onto one anchor would move a posted time by ~10 minutes
+  // in one season or the other, so the anchor has to travel with the offset.
+  arvitBefore: {
+    summer: { anchor: 'tzeit', minBefore: 3 },
+    winter: { anchor: 'havdalah', minBefore: 10 },
+  },
 };
 
 // Five rows, all resolved by resolveShabbatTimes below. סוף זמן ק״ש and מנחה גדולה
@@ -47,8 +64,11 @@ export const SHABBAT_PRAYERS = [
   { name: 'ערבית מוצ״ש', computed: 'shabArvit', day: 6 },
 ];
 
-// Maps each displayed zman to its Hebcal `times` field. Times come live from
-// Hebcal for Nitzan (see services/hebcal.js LOCATION).
+// Maps each displayed zman to its Hebcal `times` field, plus an optional `offsetMin`
+// applied to it. Times come live from Hebcal for Nitzan (see services/hebcal.js
+// LOCATION). Only צאת הכוכבים carries an offset: the shul reckons it as שקיעה+18
+// rather than by any of Hebcal's tzeit fields (see TZEIT_AFTER_SUNSET_MIN). צאת ר״ת
+// below is Hebcal's own — a fixed 72 minutes after שקיעה — and is unaffected.
 export const ZMANIM_ROWS = [
   { name: 'עלות השחר', field: 'alotHaShachar' },
   { name: 'הנץ החמה', field: 'sunrise' },
@@ -58,7 +78,7 @@ export const ZMANIM_ROWS = [
   { name: 'חצות היום', field: 'chatzot' },
   { name: 'מנחה גדולה', field: 'minchaGedola' },
   { name: 'שקיעת החמה', field: 'sunset' },
-  { name: 'צאת הכוכבים', field: 'tzeit85deg' },
+  { name: 'צאת הכוכבים', field: 'sunset', offsetMin: TZEIT_AFTER_SUNSET_MIN },
   { name: 'צאת ר״ת', field: 'tzeit72min' },
 ];
 
@@ -329,8 +349,25 @@ export function resolveShabbatTimes(
     shabKabbalat: season ? toClock(candles, config.kabbalatAfterCandlesMin[season]) : null,
     shabShacharit: season ? config.shacharit[season] : null,
     shabMincha: toClock(saturdaySunset, -config.minchaBeforeSunsetMin),
-    shabArvit: season ? toClock(havdalah, -config.arvitBeforeHavdalahMin[season]) : null,
+    shabArvit: arvitTime(season, { havdalah, saturdaySunset }, config),
   };
+}
+
+// ערבית מוצ״ש, whose anchor changes with the season (SHABBAT_CONFIG.arvitBefore):
+// קיץ counts back from צאת הכוכבים, חורף from הבדלה. So this row now blanks for a
+// different reason in each half of the year — in קיץ when the Saturday-zmanim request
+// failed, in חורף when /shabbat did — where before it was always /shabbat. Worth
+// knowing when reading a half-blank panel: in summer ערבית and מנחה go together and
+// הדלקת נרות survives; in winter it is the other way round.
+//
+// The קיץ branch folds both hops into ONE offset off שקיעה rather than chaining:
+// `toClock` returns 'HH:MM', not an instant, so its output cannot be fed back in.
+function arvitTime(season, { havdalah, saturdaySunset }, config) {
+  if (!season) return null;
+  const { anchor, minBefore } = config.arvitBefore[season];
+  return anchor === 'tzeit'
+    ? toClock(saturdaySunset, config.tzeitAfterSunsetMin - minBefore)
+    : toClock(havdalah, -minBefore);
 }
 
 // מנחה = the governing Thursday's sunset minus 20 minutes, fixed for the week.

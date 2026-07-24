@@ -25,7 +25,9 @@ Five rows, replacing the previous eight.
 | 2 | מנחה וקבלת שבת | candle lighting **+2 min** (שעון קיץ) / **+5 min** (שעון חורף) |
 | 3 | שחרית | fixed **07:45** (שעון קיץ) / **07:30** (שעון חורף) |
 | 4 | מנחה | Shabbat **שקיעה − 90 min**, both seasons |
-| 5 | ערבית מוצ״ש | **הבדלה − 3 min** (שעון קיץ) / **− 10 min** (שעון חורף) |
+| 5 | ערבית מוצ״ש | **צאת הכוכבים − 3 min** (שעון קיץ) / **הבדלה − 10 min** (שעון חורף) |
+
+Row 5's anchor is **not the same in both seasons** — see "צאת הכוכבים" below.
 
 Removed rows: סוף זמן ק״ש, מנחה גדולה, שיעור בפרשה. The first two already appear in the
 זמנים panel on the left; the שיעור belongs in the שיעורים panel rather than among prayer
@@ -42,10 +44,36 @@ Confirmed against practice during design.
 | מנחה וקבלת שבת | 19:17 | 16:45 |
 | שחרית | 07:45 | 07:30 |
 | מנחה | 18:05 | 15:30 |
-| ערבית מוצ״ש | 20:09 | 17:28 |
+| ערבית מוצ״ש | 19:50 | 17:28 |
 
 The winter מנחה at ~15:30 — about two hours before ערבית — is intentional and was
 explicitly confirmed. שקיעה−90 applies in both seasons.
+
+The summer ערבית was **20:09** until 2026-07-24, when it was anchored to הבדלה in both
+seasons; the correction to צאת הכוכבים moved it 19 minutes earlier. Winter is unchanged
+— it still counts back from הבדלה.
+
+### צאת הכוכבים
+
+The shul reckons צאת הכוכבים as a fixed **שקיעה + 18 minutes**, in both seasons. This is
+its own number, not one of Hebcal's tzeit fields: `tzeit85deg` (sun 8.5° below the
+horizon) runs 22 minutes later in July, and `tzeit72min` — which the זמנים panel still
+posts, correctly, on its own row as **צאת ר״ת** — later still.
+
+It matters in two places, and they must agree:
+
+* the **צאת הכוכבים** row in the זמנים panel, and the same row on `/zmanim`
+* **summer's ערבית מוצ״ש**, which counts back 3 minutes from it
+
+Winter's ערבית deliberately does *not* use it. In winter the row counts back 10 minutes
+from Hebcal's **הבדלה** (8.5°), which falls later than שקיעה+18 — so the two seasons
+genuinely have different anchors, and the offset alone does not describe the row.
+
+The single source of the number is `TZEIT_AFTER_SUNSET_MIN` in `displayData.js`. Both
+screens import it; `SHABBAT_CONFIG.tzeitAfterSunsetMin` re-exports it so
+`resolveShabbatTimes` stays fully config-driven for the admin panel. Before this was
+centralised the display read `tzeit85deg` while `/zmanim` hardcoded `+18`, and the two
+posted times 22 minutes apart under the same Hebrew name.
 
 ## Data sources
 
@@ -56,6 +84,11 @@ already calls via `getParasha()`. The response's `items` array carries entries w
 `category: 'candles'` and `category: 'havdalah'` next to the `parashat` entry the code
 currently reads; today the other two are discarded. No new request is needed — only
 reading fields already on the wire.
+
+הבדלה is requested as `M=on`, which is Hebcal's "nightfall, sun 8.5° below the horizon"
+rather than its default of a fixed 50 minutes after sundown. That parameter is load-bearing
+for winter's ערבית and is easy to mistake for a display flag — it does *not* control the
+parasha, which `/shabbat` returns by default.
 
 The candle-lighting offset is sent explicitly as `b=20` (minutes before שקיעה) rather
 than left to Hebcal's per-location default, which happens to be the same 20 today. Left
@@ -78,7 +111,13 @@ When Shabbat runs straight **into** Yom Tov (Rosh Hashanah 2026-09-12, Sukkot
 night and הבדלה lands on Sunday, ~24 hours from every other row and not a minyan time.
 ערבית still davens Saturday night at roughly the usual מוצ״ש hour, so the מוצ״ש anchor is
 **that Saturday's `havdalah` item if present, otherwise that Saturday's `candles` item**.
-The −3 / −10 offset applies either way.
+
+Since ערבית became season-anchored this fallback almost never fires for it: every Yom Tov
+falls inside שעון קיץ (Israel's DST runs from March to late October), and in קיץ ערבית
+counts off שקיעה, not off `havdalah` at all. The fallback is kept because `havdalah` is
+still one of the three anchors — `isSummerTime` reads it as a last resort — and because
+the day Yom Tov and שעון חורף do overlap, a missing anchor here is the difference between
+a posted ערבית and `--:--`.
 
 **Shabbat's שקיעה** does need a new request. The display fetches *today's* zmanim, but
 the Shabbat panel is reachable on any weekday through the TopBar toggle, so midweek
@@ -157,9 +196,18 @@ export const SHABBAT_CONFIG = {
   kabbalatAfterCandlesMin: { summer: 2, winter: 5 },
   shacharit:               { summer: '07:45', winter: '07:30' },
   minchaBeforeSunsetMin:   90,
-  arvitBeforeHavdalahMin:  { summer: 3, winter: 10 },
+  tzeitAfterSunsetMin:     TZEIT_AFTER_SUNSET_MIN,   // 18
+  arvitBefore: {
+    summer: { anchor: 'tzeit',    minBefore: 3 },
+    winter: { anchor: 'havdalah', minBefore: 10 },
+  },
 };
 ```
+
+`arvitBefore` carries the anchor alongside the offset rather than being a bare
+`{ summer, winter }` pair of minutes, because the two seasons count back from different
+things. A plain number per season cannot express that, and flattening both onto one
+anchor moves a posted time by ~10 minutes in whichever season loses.
 
 When the admin panel arrives, only the *source* of this object changes — static import
 becomes fetched state. No computation logic moves.
@@ -191,9 +239,14 @@ Each kind of failure has its own on-screen signature, and they are worth telling
 
 | What went wrong | What the שבת panel looks like |
 |---|---|
-| Whole `/shabbat` request failed | `הדלקת נרות`, `מנחה וקבלת שבת` and `ערבית מוצ״ש` blank; `שחרית` and `מנחה` still show times |
-| Saturday zmanim request failed | only `מנחה` blank |
+| Whole `/shabbat` request failed | `הדלקת נרות` and `מנחה וקבלת שבת` blank; `ערבית מוצ״ש` blank **in winter only**; `שחרית` and `מנחה` still show times |
+| Saturday zmanim request failed | `מנחה` blank; `ערבית מוצ״ש` blank **in summer only** |
 | **Season undetermined** (`isSummerTime` → `null`) | **`מנחה וקבלת שבת`, `שחרית` and `ערבית מוצ״ש` blank while `הדלקת נרות` and `מנחה` still show times** |
+
+Because ערבית's anchor is season-dependent, the first two rows are no longer symmetric:
+ערבית fails **with `מנחה`** in summer (both hang off the Saturday zmanim request) and
+**with `הדלקת נרות`** in winter (both hang off `/shabbat`). Which of the two it keeps
+company with is itself the tell for which request died.
 
 The third row is the distinctive one: it is the only case in which `שחרית` — a fixed
 string with no anchor to lose — goes blank, and the only case in which `הדלקת נרות` shows

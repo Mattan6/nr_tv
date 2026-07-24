@@ -79,7 +79,12 @@ export const getParasha = async (candleLightingMin = SHABBAT_CONFIG.candleLighti
         latitude: LOCATION.latitude,
         longitude: LOCATION.longitude,
         tzid: LOCATION.tzid,
-        M: 'on', // Include parasha
+        // הבדלה at nightfall (sun 8.5° below the horizon) instead of Hebcal's default
+        // of a fixed 50 minutes after sundown. This does NOT control the parasha —
+        // that comes back by default — so do not drop the line on those grounds:
+        // winter's ערבית מוצ״ש counts back 10 minutes from this הבדלה
+        // (SHABBAT_CONFIG.arvitBefore), and removing it would move that posted time.
+        M: 'on',
         b: candleLightingMin,
       },
     });

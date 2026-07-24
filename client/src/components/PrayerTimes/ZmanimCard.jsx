@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { TZEIT_AFTER_SUNSET_MIN } from '../display/displayData';
 
 const SECTIONS = [
   {
@@ -57,11 +58,15 @@ const formatTime = (timeString) => {
   }
 };
 
+// Same reckoning as the main display's זמנים panel, off the same constant — the two
+// screens post the same zman under the same name and must never disagree. The 18 used
+// to be a literal here while the display read Hebcal's 8.5° field, and the two were
+// 22 minutes apart in July.
 const computeTzeit = (zmanim) => {
   if (!zmanim?.sunset) return '--:--';
   try {
     const d = new Date(zmanim.sunset);
-    d.setMinutes(d.getMinutes() + 18);
+    d.setMinutes(d.getMinutes() + TZEIT_AFTER_SUNSET_MIN);
     return format(d, 'HH:mm');
   } catch {
     return '--:--';

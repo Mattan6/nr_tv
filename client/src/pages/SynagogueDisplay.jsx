@@ -184,7 +184,7 @@ const SynagogueDisplay = () => {
   // disagree by an hour on a device whose timezone is set wrong.
   const zmanimRows = ZMANIM_ROWS.map((r) => ({
     name: r.name,
-    time: (zmanimTimes && toClock(zmanimTimes[r.field])) || '--:--',
+    time: (zmanimTimes && toClock(zmanimTimes[r.field], r.offsetMin)) || '--:--',
   }));
 
   // Advance through each list with one shared counter; an empty list yields null so
