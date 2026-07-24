@@ -44,6 +44,17 @@ test('mergeJokes deduplicates against the existing pool and within one batch', (
   assert.strictEqual(draft.jokes.length, 2);
 });
 
+// Pools written before jokes were flattened to a single line still hold newlines; the same
+// joke arriving flattened must not be stored a second time.
+test('mergeJokes recognises a legacy newline-separated joke as a duplicate', () => {
+  const draft = { jokes: [{ id: 'legacy', text: 'מה אמר החתול לעכבר?\nבוא נהיה חברים טובים.', isActive: true }] };
+
+  const added = mergeJokes(draft, ['מה אמר החתול לעכבר? בוא נהיה חברים טובים.']);
+
+  assert.strictEqual(added, 0);
+  assert.strictEqual(draft.jokes.length, 1);
+});
+
 test('mergeJokes stops at MAX_POOL', () => {
   const draft = { jokes: [] };
   // Distinct, filter-passing jokes: the counter varies a word, not punctuation.

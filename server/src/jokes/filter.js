@@ -5,12 +5,23 @@
 // Pure by design: no network, no filesystem, no clock. The whole table below is testable
 // directly, and it is — see server/test/jokesFilter.test.js.
 
-// 110 characters is not an arbitrary round number: it is the largest joke that fits the
-// panel at 26px / line-height 1.35 in a ~458px column (4 wrapped lines). It and the font
-// size in JokesPanel must move together or the text overflows the card.
+// 110 characters is not an arbitrary round number, and the guarantee it carries depends on
+// normalize() flattening every joke to ONE logical line (see below).
+//
+// Measured in the running display: the joke column is 386px wide, the card leaves 163px of
+// height for the text, and at 26px / line-height 1.35 a visual line holds ~29 characters
+// and costs 35.1px. One logical line therefore wraps to at most ceil(110/29) = 4 visual
+// lines = 140px, which fits 163px with 23px to spare.
+//
+// This was originally written to allow up to 3 explicit lines, and that silently broke the
+// guarantee: an embedded newline ends a visual line early, so 2 of the first 150 real
+// scraped jokes rendered 5 lines (175px) and overflowed the card by 12px. Character count
+// alone cannot bound height once newlines are in play. Hence the flattening.
+//
+// MAX_LEN, the 26px in JokesPanel, and the flattening are one mechanism in three places.
+// Change any of them and re-measure the other two.
 const MIN_LEN = 25;
 const MAX_LEN = 110;
-const MAX_LINES = 3;
 const MIN_WORDS = 5;
 const MAX_WORDS = 22;
 const MAX_WORD_LEN = 12;
@@ -73,10 +84,14 @@ function normalize(raw) {
       .replace(/[´`]/g, "'")
       .replace(/\r\n?/g, '\n')
       .replace(/[ \t ]+/g, ' ')
+      // Flattened to a single logical line, not joined with '\n'. This is what makes
+      // MAX_LEN a real height bound — see the note above the constants. The panel wraps
+      // and centres the text itself, so nothing reads worse for it.
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean)
-      .join('\n')
+      .join(' ')
+      .replace(/ {2,}/g, ' ')
       .trim()
   );
 }
@@ -85,7 +100,8 @@ function normalize(raw) {
 // matches the rule table in the spec, so a reason is always the *first* thing wrong.
 function rejectReason(text) {
   if (text.length < MIN_LEN || text.length > MAX_LEN) return 'length';
-  if (text.split('\n').length > MAX_LINES) return 'lines';
+  // No 'lines' rule: normalize() has already flattened the text, so a line count is always
+  // 1 by construction. Bounding height is MAX_LEN's job now.
   if (/[A-Za-z]/.test(text)) return 'latin';
   const hebrew = (text.match(/[א-ת]/g) || []).length;
   if (hebrew / text.length < MIN_HEBREW_RATIO) return 'hebrew-ratio';

@@ -247,4 +247,9 @@ Note: after changing any client source or `client/.env`, the Vite dev server mus
 restarted (`npm run dev`) for the change to reach an already-open browser — a page that
 has been open since before the change will otherwise keep running the old code.
 
-Still static (no admin panel yet): פרנס היום, the ticker, and prayer/zmanim times.
+Still static (no admin panel yet): the ticker and prayer/zmanim times.
+
+בדיחות ליאור has no admin panel either, by design — the server scrapes jokes from
+yo-yoo.co.il once a day, filters them by rule (`server/src/jokes/`), and appends the
+survivors to the same `content.json`. Nobody approves a joke before it reaches the wall;
+see `docs/superpowers/specs/2026-07-24-jokes-panel-design.md`.

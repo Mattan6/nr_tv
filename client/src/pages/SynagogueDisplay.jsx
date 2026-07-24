@@ -5,7 +5,6 @@ import {
   SHABBAT_PRAYERS,
   SHABBAT_CONFIG,
   ZMANIM_ROWS,
-  PARNAS,
   TICKER,
   resolvePrayers,
   computeNextMinyan,
@@ -24,11 +23,14 @@ import PrayerTimesPanel from '../components/display/PrayerTimesPanel';
 import ZmanimPanel from '../components/display/ZmanimPanel';
 import ShiurimPanel from '../components/display/ShiurimPanel';
 import AnnouncementsPanel from '../components/display/AnnouncementsPanel';
-import { NextMinyanPanel, ParnasPanel, MazalPanel, AzkarotPanel } from '../components/display/CenterCards';
+import { NextMinyanPanel, JokesPanel, MazalPanel, AzkarotPanel } from '../components/display/CenterCards';
 import Ticker from '../components/display/Ticker';
 import useDisplayContent from '../hooks/useDisplayContent';
 
 const ROTATE_MS = 6500;
+// Jokes rotate on their own, slower clock: 6.5s is not long enough to read a joke and
+// reach its punch line.
+const JOKE_ROTATE_MS = 30000;
 const ZMANIM_REFRESH_MS = 21600000; // 6 hours
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -44,7 +46,11 @@ const SynagogueDisplay = () => {
   // `pick`), because the lists are editable now (via /adminGabbai) and a list that
   // shrinks must not leave an index pointing past its end.
   const [tick, setTick] = useState(0);
-  const { announcements, shiurim, mazal, azkarot } = useDisplayContent();
+  // Jokes get their own counter because they rotate on their own clock — see
+  // JOKE_ROTATE_MS. Same render-time modulo as `pick` below, for the same reason: the pool
+  // grows when the server scrapes, and an index must never point past the current list.
+  const [jokeTick, setJokeTick] = useState(0);
+  const { announcements, shiurim, mazal, azkarot, jokes } = useDisplayContent();
   const [zmanimTimes, setZmanimTimes] = useState(null);
   const [minchaTime, setMinchaTime] = useState(null);
   const [shabbatTimes, setShabbatTimes] = useState({});
@@ -69,6 +75,12 @@ const SynagogueDisplay = () => {
   useEffect(() => {
     const r = setInterval(() => setTick((t) => t + 1), ROTATE_MS);
     return () => clearInterval(r);
+  }, []);
+
+  // Jokes rotate independently of the 6.5s panels.
+  useEffect(() => {
+    const j = setInterval(() => setJokeTick((t) => t + 1), JOKE_ROTATE_MS);
+    return () => clearInterval(j);
   }, []);
 
   // Live zmanim (Nitzan) + this week's parasha, candle lighting and havdalah.
@@ -181,6 +193,8 @@ const SynagogueDisplay = () => {
   const ann = pick(announcements);
   const maz = pick(mazal) || {};
   const azk = pick(azkarot) || {};
+  // Its own counter, so `pick` (which is on the 6.5s tick) can't be reused here.
+  const joke = jokes.length ? jokes[jokeTick % jokes.length] : null;
 
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#070a10' }}>
@@ -239,7 +253,7 @@ const SynagogueDisplay = () => {
               <AnnouncementsPanel ann={ann?.text || ''} annKey={tick} />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', minHeight: 0 }}>
                 <NextMinyanPanel next={next} />
-                <ParnasPanel parnas={PARNAS} />
+                <JokesPanel joke={joke} jokeKey={jokeTick} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', minHeight: 0 }}>
                 <MazalPanel maz={maz} mazKey={tick} />

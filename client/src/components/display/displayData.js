@@ -1,5 +1,5 @@
 // Static, editable content for the synagogue display dashboard.
-// (Prayer schedule, shiurim, announcements, mazal tov, azkarot, parnas, ticker.)
+// (Prayer schedule and ticker.)
 // The zmanim panel is wired to live Hebcal data — see ZMANIM_ROWS below.
 
 // Weekday (חול) prayers. Each entry is one of:
@@ -63,14 +63,10 @@ export const ZMANIM_ROWS = [
 ];
 
 // שיעורים / הודעות / מזל טוב / אזכרות are no longer static — they are edited in
-// /adminGabbai and served from the API. Seed values live in
-// server/src/store/defaultContent.js; the display fetches them via useDisplayContent.
-// PARNAS and TICKER below stay static for now (no admin panel for them yet).
-
-export const PARNAS = {
-  name: 'הרב יחזקאל ישעי שליט״א',
-  detail: 'נדבת ידידנו הנכבד\nרודף צדקה וחסד',
-};
+// /adminGabbai and served from the API. בדיחות ליאור travels in the same document but is
+// scraped and filtered by the server (server/src/jokes/) rather than edited by anyone.
+// Seed values for all of them live in server/src/store/defaultContent.js; the display
+// fetches them via useDisplayContent. TICKER below stays static for now.
 
 export const TICKER =
   'בית כנסת נווה רחמים  •  נא לכבד את קדושת בית הכנסת ולכבות את הטלפונים  •  נדבת משפחת בן חמו לעילוי נשמת משה בן פרטונה  •  לתרומות והנצחות פנו לגבאי · 054-848-7595  •  ';

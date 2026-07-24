@@ -1,5 +1,5 @@
 const { randomUUID } = require('node:crypto');
-const { screen } = require('./filter');
+const { screen, normalize } = require('./filter');
 const { fetchAll: fetchAllJokes } = require('./source');
 
 // Well under the store's MAX_ITEMS (500). The pool only has to be large enough that the
@@ -19,9 +19,11 @@ const BOOT_DELAY_MS = 30000;
 // seed in their place. server/test/jokesRefresh.test.js pins that upgrade path.
 function mergeJokes(draft, incoming) {
   if (!Array.isArray(draft.jokes)) draft.jokes = [];
-  // Dedup on the normalized text the filter returns, not the raw scrape, so the same joke
-  // with different surrounding whitespace or markup is recognised as a duplicate.
-  const seen = new Set(draft.jokes.map((j) => j.text));
+  // Dedup on normalized text on BOTH sides, not the raw scrape, so the same joke with
+  // different whitespace or markup is recognised as a duplicate. Normalizing the stored
+  // side too matters for pools written before jokes were flattened to a single line:
+  // otherwise "שורה\nשנייה" and "שורה שנייה" would both be kept.
+  const seen = new Set(draft.jokes.map((j) => normalize(j.text)));
   let added = 0;
   for (const raw of incoming) {
     if (draft.jokes.length >= MAX_POOL) break;

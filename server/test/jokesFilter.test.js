@@ -3,11 +3,37 @@ const assert = require('node:assert');
 
 const { normalize, screen } = require('../src/jokes/filter');
 
-test('normalize turns <br> into newlines and strips tags and entities', () => {
-  assert.strictEqual(
-    normalize('  שלום<br />עולם&nbsp;<b>שוב</b>  '),
-    'שלום\nעולם שוב'
-  );
+test('normalize strips tags and entities and flattens to one line', () => {
+  assert.strictEqual(normalize('  שלום<br />עולם&nbsp;<b>שוב</b>  '), 'שלום עולם שוב');
+});
+
+// The flattening is load-bearing, not cosmetic: an embedded newline ends a visual line
+// early, and two real scraped jokes overflowed the card by 12px when newlines were kept.
+// With one logical line, MAX_LEN alone bounds the rendered height.
+test('normalize leaves no newline for any input shape', () => {
+  const inputs = [
+    'שורה ראשונה<br />שורה שנייה<br />שורה שלישית',
+    'שורה ראשונה\nשורה שנייה\r\nשורה שלישית',
+    'שורה\n\n\nעם שורות ריקות',
+  ];
+  for (const raw of inputs) {
+    assert.ok(!normalize(raw).includes('\n'), `newline survived: ${JSON.stringify(raw)}`);
+  }
+});
+
+// The height guarantee in one assertion: nothing the filter accepts can exceed the
+// character budget the panel's 26px font was measured against.
+test('no accepted joke can exceed the panel character budget', () => {
+  const accepted = [
+    'מה אמר הקיר לקיר השני? ניפגש בפינה.',
+    'איש אחד הלך ברחוב עם מקל על הראש.<br />שאל אותו חברו: זה לא מכביד?<br />ענה לו: להפך.',
+  ];
+  for (const raw of accepted) {
+    const v = screen(raw);
+    if (!v.ok) continue;
+    assert.ok(v.text.length <= 110, `accepted a ${v.text.length}-char joke`);
+    assert.ok(!v.text.includes('\n'), 'accepted a joke with a newline');
+  }
 });
 
 // The site stores a gershayim as geresh + acute accent; left alone it shows on the wall
@@ -44,7 +70,6 @@ test('each rule rejects with its own reason', () => {
   const cases = [
     ['קצר מדי.', 'length'],
     ['א'.repeat(120), 'length'],
-    ['שורה אחת פה\nשורה שתיים פה\nשלוש כאן\nוארבע כאן', 'lines'],
     ['מה אמר הקיר לקיר השני? hello ניפגש בפינה', 'latin'],
     ['123 456 789 <> {} [] () 321 654 987 111', 'hebrew-ratio'],
     ['מה אמר הקיר לקיר השני??? ניפגש שם בפינה', 'punct-repeat'],
@@ -54,7 +79,7 @@ test('each rule rejects with its own reason', () => {
     // A 2-letter label: word-repeat skips words under 3 letters, so this is the case
     // speaker-repeat actually exists for. A longer label like דני: is caught by
     // word-repeat first, which is fine — both mean the same mangled dump.
-    ['בן: שלום לך\nבן: מה נשמע\nבן: אני הולך הביתה', 'speaker-repeat'],
+    ['בן: שלום לך בן: מה נשמע בן: אני הולך הביתה', 'speaker-repeat'],
     ['אבא אמר', 'length'],
     // 23 two-letter words. The MAX_WORDS ceiling is all but unreachable under the
     // 110-character cap — it needs an average word below ~4 characters — so it is a

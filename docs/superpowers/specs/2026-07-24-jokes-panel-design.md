@@ -108,7 +108,7 @@ Normalization first: decode HTML entities, collapse whitespace runs, trim.
 | # | Rule | Rejects |
 |---|---|---|
 | 1 | Length 25–110 characters | Fragments; anything overflowing the panel |
-| 2 | At most 3 newline-separated lines | Multi-paragraph submissions |
+| 2 | *(withdrawn — see "The fit guarantee" below)* | — |
 | 3 | No Latin letter `[A-Za-z]`; ≥50% of all characters are Hebrew letters | English, mixed-script gibberish |
 | 4 | No punctuation character repeated 3+ times consecutively | `!!!!!!!!!!` |
 | 5 | No word of 3+ letters repeated 3+ times | Gibberish loops |
@@ -122,12 +122,43 @@ Rule 5's 3-letter floor keeps common short words (`לא`, `מה`, `את`) from r
 legitimate jokes that simply repeat them. Rule 6 counts occurrences of *one* label, not
 labels in total.
 
-Rule 1's upper bound is what makes "never exceeds the panel frame" true by construction,
-and it is a claim about a specific font size: at 26px with line-height 1.35 in a ~458px
-column, 110 Hebrew characters wrap to at most four lines (~140px), which fits under the
-heading inside the ~200px panel. Changing the font size invalidates the cap and both must
-move together. Implementation must confirm the worst case visually with a 110-character
-joke. Nothing on the client measures or shrinks text.
+### The fit guarantee
+
+The original design claimed rule 1 made "never exceeds the panel frame" true by
+construction, with rule 2 allowing up to 3 newline-separated lines. **That was wrong, and
+measuring it in the running display is what caught it.**
+
+An embedded newline ends a visual line early, so a joke well under 110 characters could
+still occupy more vertical lines than the cap implies. Of the first 150 real scraped jokes,
+**two rendered 5 visual lines (175px) against 163px of available height — a 12px
+overflow.** Character count cannot bound rendered height once newlines are in play, and
+character count is a weak proxy for pixel width in any case, since Hebrew glyph widths
+vary.
+
+The fix: `normalize()` flattens every joke to **one logical line**, joining on spaces
+rather than newlines. Rule 2 is therefore withdrawn — with no newlines, a line count is
+always 1 by construction, and MAX_LEN alone bounds the height.
+
+Measured in the running panel:
+
+| Quantity | Value |
+|---|---|
+| Joke column width | 386px |
+| Height available for joke text | 163px |
+| Font / line-height | 26px / 1.35 → 35.1px per line |
+| Characters per visual line | ~29 |
+| Worst case at 110 chars | ⌈110/29⌉ = 4 lines = 140px |
+| Headroom | 23px |
+
+Re-measured across the full live pool plus the seed (180 jokes) after the fix: tallest
+140px, zero overflowing. The alternative of keeping newlines and capping at 87 characters
+also fitted, but discarded 16 of those 180 jokes for no gain.
+
+`MAX_LEN`, the 26px in `JokesPanel`, and the flattening are one mechanism in three places;
+changing any one requires re-measuring the others. As belt-and-braces, the card carries
+`overflow: hidden`, so if that coupling is ever broken a long joke clips inside its own
+card rather than spilling across the panel beside it. Nothing on the client measures or
+shrinks text.
 
 Rules 4–8 are what the rejected `?` rule was traded for. Validated against five real
 scraped samples: three are rejected (two of them by more than one rule), one weak-but-
@@ -146,15 +177,18 @@ thereafter.
 - Any failure is logged and swallowed. A scrape error must never take down the server or
   the content API.
 
-### `client/src/components/display/JokesPanel.jsx`
+### `JokesPanel`, in `client/src/components/display/CenterCards.jsx`
 
-Rendered in `CenterCards.jsx`'s existing `centeredCard` style, in the grid slot
-`ParnasPanel` occupied — centre column, middle row, beside המניין הבא.
+It lives in `CenterCards.jsx` alongside the other centre cards rather than in its own
+file, matching the existing pattern.
+
+Rendered in that file's existing `centeredCard` style, in the grid slot `ParnasPanel`
+occupied — centre column, middle row, beside המניין הבא.
 
 - Gold `smallTitle` heading: **בדיחות ליאור**.
 - Joke text centred at a fixed 26px / line-height 1.35 (the size rule 1's cap is derived
-  from), `whiteSpace: 'pre-line'`, `omFade` transition on change — identical treatment to
-  מזל טוב and לעילוי נשמת.
+  from), with `omFade` on change — identical treatment to מזל טוב and לעילוי נשמת. No
+  `whiteSpace: 'pre-line'`: jokes carry no newlines by the time they are stored.
 - An empty pool renders a quiet placeholder. It must not crash and must not render an
   empty box.
 
@@ -206,7 +240,7 @@ All tests run offline. The scraper is never exercised against the live network.
 | Pooling | Dedup against an existing pool; the 150 cap; failures leave the pool intact |
 | Store | A `content.json` with no `jokes` key loads without quarantine and gains the array on refresh |
 | Panel | An empty pool renders the placeholder rather than crashing |
-| Fit | A 110-character joke at 26px is checked visually in the running display and does not overflow the panel |
+| Fit | Every joke in the live pool plus the seed is measured in the running display against the card's available height; zero may overflow |
 
 ## Out of scope
 

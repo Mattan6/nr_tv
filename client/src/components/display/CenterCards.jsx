@@ -7,7 +7,7 @@ const smallTitle = {
   color: '#e6c98a',
 };
 
-// The centered glass card used by parnas / mazal / azkarot (no inset highlight).
+// The centered glass card used by jokes / mazal / azkarot (no inset highlight).
 const centeredCard = {
   ...CARD_STYLE,
   boxShadow: '0 12px 30px rgba(0,0,0,0.38)',
@@ -39,11 +39,34 @@ export const NextMinyanPanel = ({ next }) => (
   </div>
 );
 
-export const ParnasPanel = ({ parnas }) => (
-  <div style={{ ...centeredCard, justifyContent: 'center' }}>
-    <div style={smallTitle}>פרנס היום</div>
-    <div style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: '27px', fontWeight: 700, color: '#f4ead2', marginTop: '10px', lineHeight: 1.3 }}>{parnas.name}</div>
-    <div style={{ fontSize: '22px', fontWeight: 400, color: '#a7b0bf', marginTop: '8px', whiteSpace: 'pre-line', lineHeight: 1.4 }}>{parnas.detail}</div>
+// בדיחות ליאור. The pool is scraped and filtered server-side (server/src/jokes/), so
+// nothing here validates or truncates.
+//
+// The 26px below is half of the fit guarantee; the other half is the filter's 110-character
+// cap and its flattening of jokes to a single line. Measured in this panel: 386px of width,
+// 163px of height for the text, ~29 characters and 35.1px per visual line — so the worst
+// case is 4 lines / 140px. Changing this font size without re-measuring MAX_LEN in
+// server/src/jokes/filter.js is what puts text back outside the card.
+//
+// overflow:hidden is deliberate belt-and-braces: if that coupling is ever broken, a long
+// joke clips inside its own card instead of spilling across the panel beside it.
+export const JokesPanel = ({ joke, jokeKey }) => (
+  <div style={{ ...centeredCard, overflow: 'hidden' }}>
+    <div style={smallTitle}>בדיחות ליאור</div>
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }}>
+      <div
+        key={jokeKey}
+        style={{
+          animation: 'omFade .7s ease',
+          fontSize: '26px',
+          fontWeight: 600,
+          color: '#f4ead2',
+          lineHeight: 1.35,
+        }}
+      >
+        {joke ? joke.text : 'אין בדיחות להצגה כרגע'}
+      </div>
+    </div>
   </div>
 );
 

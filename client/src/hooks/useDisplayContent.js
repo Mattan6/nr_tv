@@ -3,7 +3,10 @@ import { getContent } from '../services/content';
 
 const POLL_MS = 30000;
 const CACHE_KEY = 'synagogue-display-content';
-const EMPTY = { announcements: [], shiurim: [], mazal: [], azkarot: [] };
+// `jokes` is scraper-owned rather than admin-edited, but it travels in the same document
+// and carries the same isActive flag, so it needs nothing special here beyond a key —
+// activeOnly derives its panel list from this object.
+const EMPTY = { announcements: [], shiurim: [], mazal: [], azkarot: [], jokes: [] };
 
 // Keep only the items the gabbai has left visible, per panel.
 const activeOnly = (doc) =>
