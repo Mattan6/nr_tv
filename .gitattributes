@@ -1,0 +1,4 @@
+# The scraper fixture is a byte-exact windows-1255 capture of a real yo-yoo page, not
+# text. Line-ending conversion would rewrite its bytes on checkout and quietly change
+# what server/test/jokesSource.test.js is actually decoding.
+server/test/fixtures/yoyoo-page.html binary
