@@ -5,6 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const { createContentStore } = require('../src/store/contentStore');
+const DEFAULT_CONTENT = require('../src/store/defaultContent');
 const { mergeJokes, refreshJokes, MAX_POOL } = require('../src/jokes/refresh');
 
 const tmpStore = async (t) => {
@@ -13,8 +14,11 @@ const tmpStore = async (t) => {
   return { dir, store: createContentStore(dir), file: path.join(dir, 'content.json') };
 };
 
-const GOOD = 'מה אמר הקיר לקיר השני? ניפגש בפינה.';
-const ALSO_GOOD = 'למה השלד לא הלך למסיבה? כי לא היה לו עם מי.';
+// A fresh store is seeded with jokes, so anything a test "scrapes" has to be absent from
+// the seed or dedup will — correctly — drop it and the test will measure nothing.
+const SEEDED = DEFAULT_CONTENT.jokes.length;
+const GOOD = 'מה אמר החתול לעכבר? בוא נהיה חברים טובים.';
+const ALSO_GOOD = 'למה הטלפון עצוב? כי אף אחד לא מתקשר אליו.';
 
 test('mergeJokes creates the array when the document has no jokes key', () => {
   const draft = { announcements: [] };
@@ -58,9 +62,33 @@ test('refreshJokes writes accepted jokes through the store', async (t) => {
 
   assert.strictEqual(result.added, 2);
   const written = JSON.parse(await fs.readFile(file, 'utf8'));
-  assert.strictEqual(written.jokes.length, 2);
+  assert.strictEqual(written.jokes.length, SEEDED + 2, 'scraped jokes must append to the seed');
   // The seeded panels must be untouched by a jokes refresh.
   assert.ok(written.announcements.length > 0);
+});
+
+// The seed is a floor, not a starting point that gets replaced.
+test('refreshJokes never drops a seed joke', async (t) => {
+  const { store } = await tmpStore(t);
+
+  await refreshJokes(store, { fetchAll: async () => [GOOD] });
+
+  const texts = new Set((await store.read()).jokes.map((j) => j.text));
+  for (const seed of DEFAULT_CONTENT.jokes) {
+    assert.ok(texts.has(seed.text), `seed ${seed.id} was lost by a refresh`);
+  }
+});
+
+// Re-scraping the same site every day must not grow the pool without bound.
+test('a repeated refresh of the same jokes adds nothing the second time', async (t) => {
+  const { store } = await tmpStore(t);
+  const fetchAll = async () => [GOOD, ALSO_GOOD];
+
+  await refreshJokes(store, { fetchAll });
+  const second = await refreshJokes(store, { fetchAll });
+
+  assert.strictEqual(second.added, 0);
+  assert.strictEqual((await store.read()).jokes.length, SEEDED + 2);
 });
 
 // The wall is unattended: a scrape failure must leave the pool exactly as it was.
@@ -76,7 +104,7 @@ test('refreshJokes leaves the pool intact when the fetch throws', async (t) => {
   });
 
   assert.strictEqual(result.added, 0);
-  assert.strictEqual((await store.read()).jokes.length, 1);
+  assert.strictEqual((await store.read()).jokes.length, SEEDED + 1);
 });
 
 test('refreshJokes never rejects, so a scrape failure cannot crash the server', async (t) => {
@@ -101,8 +129,8 @@ test('refreshJokes keeps the pool when the scrape returns nothing', async (t) =>
   const result = await refreshJokes(store, { fetchAll: async () => [] });
 
   assert.strictEqual(result.added, 0);
-  assert.strictEqual(result.total, 1);
-  assert.strictEqual((await store.read()).jokes.length, 1);
+  assert.strictEqual(result.total, SEEDED + 1);
+  assert.strictEqual((await store.read()).jokes.length, SEEDED + 1);
 });
 
 // The upgrade path: an existing install's content.json has no jokes key and must not be
