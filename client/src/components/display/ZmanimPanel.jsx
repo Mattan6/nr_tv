@@ -5,7 +5,7 @@ const ZmanimPanel = ({ rows }) => (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 22px', marginTop: '12px', flex: 1, alignContent: 'space-between' }}>
       {rows.map((z) => (
         <div
-          key={z.name}
+          key={z.id}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 6px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
         >
           <div style={{ fontSize: '24px', fontWeight: 400, color: '#cdd5e0' }}>{z.name}</div>

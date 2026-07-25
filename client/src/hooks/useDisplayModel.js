@@ -1,0 +1,225 @@
+import { useEffect, useState } from 'react';
+import { getZmanim, getParasha } from '../services/hebcal';
+import {
+  WEEKDAY_PRAYERS,
+  SHABBAT_PRAYERS,
+  SHABBAT_CONFIG,
+  ZMANIM_ROWS,
+  resolvePrayers,
+  computeNextMinyan,
+  governingThursday,
+  weeklyMinchaTime,
+  upcomingSaturday,
+  shabbatAnchors,
+  resolveShabbatTimes,
+  screenSegment,
+  israelParts,
+  israelToday,
+  toClock,
+} from '../components/display/displayData';
+import useDisplayContent from './useDisplayContent';
+
+const ROTATE_MS = 6500;
+// Jokes rotate on their own, slower clock: 6.5s is not long enough to read a joke and
+// reach its punch line.
+const JOKE_ROTATE_MS = 30000;
+const ZMANIM_REFRESH_MS = 21600000; // 6 hours
+
+const pad = (n) => String(n).padStart(2, '0');
+
+// Everything both display layouts show, computed once.
+//
+// This lives in a hook rather than in the wall page because there are now two layouts —
+// the 1920x1080 wall canvas and the phone column — and they must never post different
+// times. A second copy of this logic would diverge the first time either the shul's
+// schedule or Hebcal's response shape changed, and the divergence would be invisible
+// until someone stood in front of the TV holding their phone. There is one מנחה here, so
+// there is one מנחה on screen.
+//
+// Layout state deliberately stays OUT: the wall's canvas scale and the phone's accordion
+// are properties of a viewport, not of the shul's day.
+export default function useDisplayModel() {
+  // null = follow the calendar; { screen, segmentKey } = a toggle override, live only
+  // while the calendar is still inside that same schedule segment. See below.
+  const [override, setOverride] = useState(null);
+  const [now, setNow] = useState(() => new Date());
+  // One counter, not three: the three rotating panels have always advanced in
+  // lockstep. The modulo is taken at render time against the CURRENT list (see
+  // `pick`), because the lists are editable now (via /adminGabbai) and a list that
+  // shrinks must not leave an index pointing past its end.
+  const [tick, setTick] = useState(0);
+  // Jokes get their own counter because they rotate on their own clock — see
+  // JOKE_ROTATE_MS. Same render-time modulo as `pick` below, for the same reason: the pool
+  // grows when the server scrapes, and an index must never point past the current list.
+  const [jokeTick, setJokeTick] = useState(0);
+  const { announcements, shiurim, mazal, azkarot, jokes } = useDisplayContent();
+  const [zmanimTimes, setZmanimTimes] = useState(null);
+  const [minchaTime, setMinchaTime] = useState(null);
+  const [shabbatTimes, setShabbatTimes] = useState({});
+  const [parasha, setParasha] = useState('');
+
+  // Tick the clock / date every second.
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Rotate announcements / mazal / azkarot. The counter only ever increases; the
+  // modulo is taken at render time against the current list (see `pick`).
+  useEffect(() => {
+    const r = setInterval(() => setTick((t) => t + 1), ROTATE_MS);
+    return () => clearInterval(r);
+  }, []);
+
+  // Jokes rotate independently of the 6.5s panels.
+  useEffect(() => {
+    const j = setInterval(() => setJokeTick((t) => t + 1), JOKE_ROTATE_MS);
+    return () => clearInterval(j);
+  }, []);
+
+  // Live zmanim (Nitzan) + this week's parasha, candle lighting and havdalah.
+  //
+  // allSettled, not all: the four requests feed four independent parts of the
+  // screen, and one failing must not blank or freeze the other three. Every branch
+  // also *assigns* — a rejected leg is written back as null so its panel falls to
+  // "--:--". Leaving the previous value in place would quietly post last week's
+  // times through an outage, which is worse than showing nothing.
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      // All three dates come off Israel's calendar, not the device's: east of Israel
+      // `new Date()` has already rolled over for part of every evening, so "today's
+      // zmanim" would be tomorrow's and `upcomingSaturday` would skip to next week's
+      // Shabbat while the hall was still sitting in this one. Each helper takes the
+      // raw instant — they do the conversion themselves.
+      const instant = new Date();
+      const today = israelToday(instant);
+      const saturday = upcomingSaturday(instant);
+      const [z, zThu, zSat, p] = await Promise.allSettled([
+        getZmanim(today),
+        getZmanim(governingThursday(instant)),
+        getZmanim(saturday),
+        getParasha(SHABBAT_CONFIG.candleLightingMinBeforeSunset),
+      ]);
+      if (cancelled) return;
+      const value = (r) => (r.status === 'fulfilled' ? r.value : null);
+      const failures = [z, zThu, zSat, p].filter((r) => r.status === 'rejected');
+      if (failures.length) {
+        console.error('Failed to load display data:', failures.map((r) => r.reason));
+      }
+      setZmanimTimes(value(z)?.times || null);
+      setMinchaTime(weeklyMinchaTime(value(zThu)?.times?.sunset));
+      setShabbatTimes(
+        resolveShabbatTimes({
+          ...shabbatAnchors(value(p), saturday),
+          saturdaySunset: value(zSat)?.times?.sunset,
+        })
+      );
+      const parashaItem = value(p)?.items?.find((it) => it.category === 'parashat');
+      setParasha(parashaItem?.hebrew || '');
+    };
+    load();
+    const id = setInterval(load, ZMANIM_REFRESH_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
+
+  // Follow the calendar: שבת from Friday 09:00, back to חול at Sunday 00:00. The TV
+  // stays powered for weeks, so a page opened on Tuesday must not still be showing
+  // weekday times on Shabbat.
+  //
+  // A toggle tap pins itself to the schedule *segment* it was overriding — the screen
+  // plus the date that run of it started on — rather than replacing the screen
+  // outright. Kept derived, so it cannot be stomped by the next one-second tick, nor
+  // lost to a remount, nor missed because a backgrounded tab throttled a timer.
+  //
+  // The segment key, not merely the screen value, is what makes it expire. 'shabbat'
+  // comes round again every week: an override compared against the value alone would
+  // stop applying at the next boundary and then quietly resurrect at the one after,
+  // so a Saturday tap of חול would hold every following Friday 09:00 for as long as
+  // the TV stayed on. A date-stamped segment key never recurs, so once `now` leaves
+  // the segment the override was cast in, it is gone for good.
+  const { screen: scheduled, key: segmentKey } = screenSegment(now);
+  const screen = override && override.segmentKey === segmentKey ? override.screen : scheduled;
+  const setScreen = (value) => setOverride({ screen: value, segmentKey });
+
+  // Israel's wall clock and calendar, never the device's — see israelParts. A TV
+  // whose timezone was set wrong at install must not read 16:43 above a זמנים panel
+  // posting שקיעה 19:43.
+  const nowIL = israelParts(now);
+  const clock = `${pad(nowIL.hour)}:${pad(nowIL.minute)}:${pad(nowIL.second)}`;
+  let hebDate = '';
+  let greg = '';
+  let weekday = '';
+  try {
+    const dateOpts = { timeZone: 'Asia/Jerusalem', day: 'numeric', month: 'long', year: 'numeric' };
+    hebDate = new Intl.DateTimeFormat('he-u-ca-hebrew', dateOpts).format(now);
+    greg = new Intl.DateTimeFormat('he', dateOpts).format(now);
+    weekday = new Intl.DateTimeFormat('he', { timeZone: 'Asia/Jerusalem', weekday: 'long' }).format(now);
+  } catch {
+    /* Intl calendar unsupported — leave header dates blank */
+  }
+
+  const isShab = screen === 'shabbat';
+  // Each schedule gets its own computed map — both lists would otherwise collide
+  // on a key named `mincha` holding different values.
+  const prayers = resolvePrayers(
+    isShab ? SHABBAT_PRAYERS : WEEKDAY_PRAYERS,
+    zmanimTimes,
+    isShab ? shabbatTimes : { mincha: minchaTime }
+  );
+  const prayersTitle = isShab ? 'זמני תפילות · שבת' : 'זמני תפילות · חול';
+  const prayersSub = isShab ? parasha || 'שבת קודש' : weekday;
+  const next = computeNextMinyan(now, prayers);
+
+  // Same Asia/Jerusalem formatter the prayer rows use, so the two panels can never
+  // disagree by an hour on a device whose timezone is set wrong.
+  const zmanimRows = ZMANIM_ROWS.map((r) => ({
+    id: r.id,
+    name: r.name,
+    time: (zmanimTimes && toClock(zmanimTimes[r.field], r.offsetMin)) || '--:--',
+  }));
+
+  // Advance through each list with one shared counter; an empty list yields null so
+  // its panel renders a quiet placeholder rather than crashing.
+  const index = (list) => (list.length ? tick % list.length : -1);
+  const pick = (list) => (list.length ? list[tick % list.length] : null);
+  const ann = pick(announcements);
+  const maz = pick(mazal) || {};
+  const azk = pick(azkarot) || {};
+  // Its own counter, so `pick` (which is on the 6.5s tick) can't be reused here.
+  const joke = jokes.length ? jokes[jokeTick % jokes.length] : null;
+
+  return {
+    // Calendar and clock
+    clock,
+    hebDate,
+    greg,
+    weekday,
+    parasha,
+    // Which schedule is showing, and how to override it
+    screen,
+    setScreen,
+    // Times
+    prayers,
+    prayersTitle,
+    prayersSub,
+    next,
+    zmanimRows,
+    // Admin-edited content
+    shiurim,
+    ann,
+    maz,
+    azk,
+    joke,
+    // Rotation. The counters double as React keys, so a panel re-mounts and replays
+    // its fade on every rotation. annCount/annIndex drive the mobile dot strip, which
+    // needs the position in the list that `ann` was picked from.
+    tick,
+    jokeTick,
+    annCount: announcements.length,
+    annIndex: index(announcements),
+  };
+}

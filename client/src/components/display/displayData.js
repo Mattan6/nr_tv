@@ -69,17 +69,22 @@ export const SHABBAT_PRAYERS = [
 // LOCATION). Only צאת הכוכבים carries an offset: the shul reckons it as שקיעה+18
 // rather than by any of Hebcal's tzeit fields (see TZEIT_AFTER_SUNSET_MIN). צאת ר״ת
 // below is Hebcal's own — a fixed 72 minutes after שקיעה — and is unaffected.
+//
+// `id` is the stable handle consumers select and key rows by — the mobile hero picks
+// three of these by id. Neither of the other two columns can do that job: `field` is
+// ambiguous (שקיעת החמה and צאת הכוכבים are both 'sunset', differing only by offset),
+// and `name` is display copy that a future edit is free to reword.
 export const ZMANIM_ROWS = [
-  { name: 'עלות השחר', field: 'alotHaShachar' },
-  { name: 'הנץ החמה', field: 'sunrise' },
-  { name: 'סוזק״ש מג״א', field: 'sofZmanShmaMGA' },
-  { name: 'סוזק״ש גר״א', field: 'sofZmanShma' },
-  { name: 'סו״ז תפילה', field: 'sofZmanTfilla' },
-  { name: 'חצות היום', field: 'chatzot' },
-  { name: 'מנחה גדולה', field: 'minchaGedola' },
-  { name: 'שקיעת החמה', field: 'sunset' },
-  { name: 'צאת הכוכבים', field: 'sunset', offsetMin: TZEIT_AFTER_SUNSET_MIN },
-  { name: 'צאת ר״ת', field: 'tzeit72min' },
+  { id: 'alot', name: 'עלות השחר', field: 'alotHaShachar' },
+  { id: 'sunrise', name: 'הנץ החמה', field: 'sunrise' },
+  { id: 'shmaMGA', name: 'סוזק״ש מג״א', field: 'sofZmanShmaMGA' },
+  { id: 'shmaGRA', name: 'סוזק״ש גר״א', field: 'sofZmanShma' },
+  { id: 'tfilla', name: 'סו״ז תפילה', field: 'sofZmanTfilla' },
+  { id: 'chatzot', name: 'חצות היום', field: 'chatzot' },
+  { id: 'minchaGedola', name: 'מנחה גדולה', field: 'minchaGedola' },
+  { id: 'sunset', name: 'שקיעת החמה', field: 'sunset' },
+  { id: 'tzeit', name: 'צאת הכוכבים', field: 'sunset', offsetMin: TZEIT_AFTER_SUNSET_MIN },
+  { id: 'tzeitRT', name: 'צאת ר״ת', field: 'tzeit72min' },
 ];
 
 // שיעורים / הודעות / מזל טוב / אזכרות are no longer static — they are edited in
