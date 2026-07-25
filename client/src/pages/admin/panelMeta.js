@@ -50,6 +50,17 @@ export const PANEL_META = {
     summary: (item) => item.name,
     sub: (item) => [item.detail, item.date].filter(Boolean).join(' · '),
   },
+  ticker: {
+    title: 'פס תחתון',
+    icon: '📜',
+    addLabel: 'הוסף שורה',
+    emptyLabel: 'אין שורות בפס — הפס לא יוצג',
+    fields: [
+      { key: 'text', label: 'תוכן השורה', type: 'text', required: true, placeholder: 'נא לכבד את קדושת בית הכנסת' },
+    ],
+    summary: (item) => item.text,
+    sub: () => '',
+  },
 };
 
 export const PANEL_KEYS = Object.keys(PANEL_META);

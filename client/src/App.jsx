@@ -6,6 +6,7 @@ import Zmanim from './pages/Zmanim';
 import AdminHome from './pages/admin/AdminHome';
 import PanelList from './pages/admin/PanelList';
 import ItemForm from './pages/admin/ItemForm';
+import ShabbatTimesForm from './pages/admin/ShabbatTimesForm';
 import useIsMobile from './hooks/useIsMobile';
 
 const queryClient = new QueryClient({
@@ -34,6 +35,10 @@ function App() {
           <Route path="/" element={<DisplayRoot />} />
           <Route path="/zmanim" element={<Zmanim />} />
           <Route path="/adminGabbai" element={<AdminHome />} />
+          {/* Above /:panel for the reader's benefit. React Router ranks static segments
+              over dynamic ones regardless of order, unlike Express — see routes/content.js,
+              where the same pair of paths does depend on declaration order. */}
+          <Route path="/adminGabbai/settings" element={<ShabbatTimesForm />} />
           <Route path="/adminGabbai/:panel" element={<PanelList />} />
           <Route path="/adminGabbai/:panel/new" element={<ItemForm />} />
           <Route path="/adminGabbai/:panel/:id" element={<ItemForm />} />

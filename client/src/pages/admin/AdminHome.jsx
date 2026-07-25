@@ -31,6 +31,13 @@ export default function AdminHome() {
           <span style={S.muted}>‹</span>
         </Link>
       ))}
+
+      {/* A single record rather than a list, so it carries no count and has its own screen. */}
+      <Link to="/adminGabbai/settings" style={{ ...S.row, marginTop: '18px' }}>
+        <span style={{ fontSize: '26px' }}>🕯</span>
+        <span style={{ flex: 1, fontSize: '19px', fontWeight: 600 }}>זמני שבת</span>
+        <span style={S.muted}>‹</span>
+      </Link>
     </div>
   );
 }
