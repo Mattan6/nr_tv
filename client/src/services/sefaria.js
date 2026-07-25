@@ -8,11 +8,9 @@ const SEFARIA_API_URL = import.meta.env.VITE_SEFARIA_API_URL || 'https://www.sef
  */
 export const getDafYomi = async () => {
   try {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-
+    // No date parameter: /calendars answers for today by default. A year/month/day
+    // triple used to be built here and never sent — if a specific date is ever needed,
+    // it goes in `params` as Sefaria's own year/month/day, not back into dead locals.
     const response = await axios.get(
       `${SEFARIA_API_URL}/calendars`,
       {
