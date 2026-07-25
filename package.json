@@ -3,11 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "description": "Synagogue digital display - runs server and client together",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "concurrently -n server,client -c blue,green \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
     "dev:client": "npm --prefix client run dev",
     "dev:server": "npm --prefix server run dev",
-    "install:all": "npm install && npm --prefix server install && npm --prefix client install"
+    "build": "npm --prefix server ci --omit=dev && npm --prefix client ci && npm --prefix client run build",
+    "start": "node server/src/server.js",
+    "install:all": "npm install && npm --prefix server install && npm --prefix client install",
+    "test": "npm --prefix server test"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

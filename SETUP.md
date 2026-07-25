@@ -72,11 +72,12 @@ NODE_ENV=development
 ### Frontend (.env)
 צור קובץ `.env` בתיקיית `client` (או העתק מ-`client/.env.example`):
 ```env
-# השאר את VITE_API_URL לא מוגדר! כשהוא לא מוגדר, client/src/services/api.js
-# נופל אוטומטית ל-`${window.location.hostname}:5000` — כלומר לכתובת שממנה
-# הדף עצמו נטען, בין אם זה מהמחשב, מהטלוויזיה או מהטלפון של הגבאי.
+# השאר את VITE_API_URL לא מוגדר! כשהוא לא מוגדר, client/src/services/api.js פונה
+# ל-`/api` יחסי — כלומר לאותה כתובת שממנה הדף עצמו נטען. בפיתוח שרת Vite מעביר את
+# הבקשה לפורט 5000 (ראה client/vite.config.js), ובפרודקשן תהליך Express אחד מגיש
+# גם את הדף וגם את ה-API. אותו קוד עובד בשני המצבים.
 # הגדר VITE_API_URL רק אם ה-API רץ על מכונה אחרת לגמרי מהדף.
-# VITE_API_URL=http://localhost:5000
+# VITE_API_URL=https://api.example.com
 VITE_HEBCAL_API_URL=https://www.hebcal.com
 VITE_SEFARIA_API_URL=https://www.sefaria.org/api
 ```
@@ -84,6 +85,8 @@ VITE_SEFARIA_API_URL=https://www.sefaria.org/api
 ⚠️ **חשוב**: אם תגדיר `VITE_API_URL=http://localhost:5000`, האפליקציה תעבוד רק
 מהמחשב שמריץ את השרת — בטלפון של הגבאי `localhost` מתפענח לטלפון עצמו, לא לשרת,
 והפאנל לא יעבוד בכלל.
+
+📦 **להעלאה לאוויר** (כתובת ציבורית לטלוויזיה ולטלפונים) ראה `DEPLOY.md`.
 
 ## שלב 4: יצירת משתמש Admin ראשוני
 

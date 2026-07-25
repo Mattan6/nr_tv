@@ -1,11 +1,19 @@
 import axios from 'axios';
 
-// "localhost" is whatever device is *viewing* the page — on the TV or the gabbai's
-// phone that is the TV or the phone, not the server. Default to the host the page
-// was served from, which is the machine running both processes. Override with
-// VITE_API_URL only when the API lives somewhere else entirely.
-const API_URL =
-  import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
+// Relative by default — same origin as the page itself.
+//
+// In production one Express process serves both the built client and the API
+// (server/src/app.js); in development Vite forwards /api to the server (vite.config.js).
+// Either way this one path works from the TV, from a phone on the shul's WiFi and from a
+// phone anywhere on the internet.
+//
+// It replaced a hardcoded `${hostname}:5000`, which was right on a LAN and wrong the
+// moment the system was served over HTTPS on a real domain: the request would go to
+// `https://example.com:5000`, where nothing listens, and a browser would refuse it as
+// mixed content even if something did.
+//
+// Set VITE_API_URL only when the API genuinely runs on a different host from the page.
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
