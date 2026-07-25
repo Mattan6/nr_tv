@@ -13,6 +13,25 @@ class NotFoundError extends Error {}
 // shape" exactly like "unparseable": log it and quarantine the file.
 const PANEL_ARRAY_KEYS = ['announcements', 'shiurim', 'mazal', 'azkarot'];
 
+// Keys added after content.json's first release. They deliberately do NOT join
+// PANEL_ARRAY_KEYS above: every file written before they existed lacks them, so shapeError
+// would condemn each real installation as wrong-shaped and serve seed data over the
+// gabbai's announcements and azkarot.
+//
+// Absent and empty are different states here, and the difference is the point. An absent
+// key means "this file predates the feature", so it is filled from the seed — which is why
+// upgrading a server keeps the four ticker lines the wall has always shown. A key that is
+// present but empty means the gabbai emptied it on purpose, and is left alone; otherwise
+// clearing the ticker would silently refill itself on the next restart.
+const BACKFILL_KEYS = ['ticker', 'settings'];
+
+function withDefaults(doc) {
+  for (const key of BACKFILL_KEYS) {
+    if (doc[key] === undefined) doc[key] = structuredClone(DEFAULT_CONTENT[key]);
+  }
+  return doc;
+}
+
 function shapeError(doc) {
   if (doc === null || typeof doc !== 'object') return 'the document is not an object';
   for (const key of PANEL_ARRAY_KEYS) {
@@ -77,7 +96,9 @@ function createContentStore(dir) {
         err.shapeReason = reason;
         throw err;
       }
-      cache = parsed;
+      // Fills only keys the file predates; see BACKFILL_KEYS. The file itself gains them
+      // on the next write, the same laziness `jokes` already relies on.
+      cache = withDefaults(parsed);
     } catch (err) {
       cache = structuredClone(DEFAULT_CONTENT);
       if (err.code === 'ENOENT') {

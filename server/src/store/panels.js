@@ -30,6 +30,13 @@ const PANELS = {
     detail: { required: false },
     date: { required: true },
   },
+  // The bottom ticker, one item per line. Modelled as a list rather than as one long
+  // string so the gabbai never types the • separator himself, and so a single line can
+  // be hidden without being deleted. The phone footer already renders a line per item;
+  // the wall joins them back into one marquee.
+  ticker: {
+    text: { required: true },
+  },
 };
 
 const PANEL_KEYS = Object.keys(PANELS);
@@ -68,4 +75,46 @@ function validateItem(panel, body) {
   return Object.keys(errors).length ? { errors } : { fields };
 }
 
-module.exports = { PANEL_KEYS, isPanel, validateItem, MAX_ITEMS };
+// The five שבת rows the gabbai may pin to a fixed time. Blank means "leave it
+// automatic" — the display computes that row from the zmanim instead.
+const SHABBAT_SETTING_KEYS = ['candles', 'kabbalat', 'shacharit', 'mincha', 'arvit'];
+
+// Deliberately NOT expressed through PANELS/validateItem. That machinery is built around
+// `required`, whose whole job is to reject a blank — and here a blank is the single most
+// important valid value there is, because clearing a field is how an override is removed.
+// Bending validateItem to accept it would weaken the rule the four content panels rely on.
+//
+// Returns { settings } or { errors }, never both. Every key is present in the output
+// whether or not the body carried it, so a partial PUT cannot leave the stored record
+// half-shaped, and unknown keys are dropped rather than persisted.
+function validateSettings(body) {
+  const source = (body && typeof body.shabbat === 'object' && body.shabbat) || {};
+  const shabbat = {};
+  const errors = {};
+
+  for (const key of SHABBAT_SETTING_KEYS) {
+    const raw = source[key];
+    const value = typeof raw === 'string' ? raw.trim() : '';
+
+    if (!value) {
+      shabbat[key] = '';
+      continue;
+    }
+    if (!TIME_RE.test(value)) {
+      errors[key] = 'שעה חייבת להיות בפורמט 18:00';
+      continue;
+    }
+    shabbat[key] = value;
+  }
+
+  return Object.keys(errors).length ? { errors } : { settings: { shabbat } };
+}
+
+module.exports = {
+  PANEL_KEYS,
+  isPanel,
+  validateItem,
+  validateSettings,
+  SHABBAT_SETTING_KEYS,
+  MAX_ITEMS,
+};

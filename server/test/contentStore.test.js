@@ -166,3 +166,52 @@ test('update returns the mutator\'s return value', async (t) => {
 
   assert.strictEqual(await store.update(() => 'x'), 'x');
 });
+
+// --- Keys added after content.json's first release --------------------------------
+//
+// `ticker` and `settings` cannot join PANEL_ARRAY_KEYS: every file written before they
+// existed lacks them, and shapeError would condemn each one as corrupt and serve seed
+// data over the gabbai's real content. They are backfilled instead — but only when
+// ABSENT. Absent means "this file predates the feature"; empty means "the gabbai
+// emptied it", and the two must not be confused, or clearing the ticker would silently
+// refill itself on the next restart.
+
+test('backfills an absent ticker with the seed lines rather than quarantining the file', async (t) => {
+  const { store, file } = await tmpStore(t);
+  const legacy = structuredClone(DEFAULT_CONTENT);
+  delete legacy.ticker;
+  delete legacy.settings;
+  await fs.writeFile(file, JSON.stringify(legacy), 'utf8');
+
+  const doc = await store.read();
+
+  assert.strictEqual(doc.ticker.length, DEFAULT_CONTENT.ticker.length);
+  assert.strictEqual(doc.ticker[0].text, DEFAULT_CONTENT.ticker[0].text);
+  assert.deepStrictEqual(doc.settings, DEFAULT_CONTENT.settings);
+  // The real content survived: the document was not treated as wrong-shaped.
+  assert.strictEqual(doc.announcements.length, DEFAULT_CONTENT.announcements.length);
+});
+
+test('leaves an explicitly empty ticker empty', async (t) => {
+  const { store, file } = await tmpStore(t);
+  const emptied = structuredClone(DEFAULT_CONTENT);
+  emptied.ticker = [];
+  await fs.writeFile(file, JSON.stringify(emptied), 'utf8');
+
+  assert.deepStrictEqual((await store.read()).ticker, []);
+});
+
+test('backfilled keys survive the next write', async (t) => {
+  const { store, file } = await tmpStore(t);
+  const legacy = structuredClone(DEFAULT_CONTENT);
+  delete legacy.ticker;
+  await fs.writeFile(file, JSON.stringify(legacy), 'utf8');
+
+  await store.read();
+  await store.update((draft) => {
+    draft.announcements[0].text = 'שונה';
+  });
+
+  const written = JSON.parse(await fs.readFile(file, 'utf8'));
+  assert.strictEqual(written.ticker.length, DEFAULT_CONTENT.ticker.length);
+});

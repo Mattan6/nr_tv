@@ -163,3 +163,73 @@ test('POST refuses to add to a panel already at MAX_ITEMS', async () => {
   const list = await (await fetch(`${base}/azkarot`)).json();
   assert.strictEqual(list.length, MAX_ITEMS, 'the over-limit item must not have been added');
 });
+
+// --- Shabbat settings -------------------------------------------------------------
+//
+// A single record, not a panel, reached through its own two routes. The ordering test
+// below is the one that matters: /settings is declared before /:panel, and if that
+// ordering is ever lost the request lands in getPanel, where isPanel('settings') is
+// false and the answer becomes a 404.
+
+test('GET /api/content/settings reaches the settings, not the panel handler', async () => {
+  const res = await fetch(`${base}/settings`);
+  const settings = await res.json();
+
+  assert.strictEqual(res.status, 200);
+  assert.ok(settings.shabbat, 'expected a shabbat record, got the panel 404 instead');
+  assert.strictEqual(settings.shabbat.mincha, '');
+});
+
+test('PUT /api/content/settings round-trips', async () => {
+  const res = await send('PUT', `${base}/settings`, {
+    shabbat: { candles: '18:00', kabbalat: '', shacharit: '', mincha: '17:30', arvit: '' },
+  });
+
+  assert.strictEqual(res.status, 200);
+  const after = await (await fetch(`${base}/settings`)).json();
+  assert.strictEqual(after.shabbat.candles, '18:00');
+  assert.strictEqual(after.shabbat.mincha, '17:30');
+  assert.strictEqual(after.shabbat.arvit, '');
+
+  // Clearing a field is how a gabbai goes back to the automatic value.
+  await send('PUT', `${base}/settings`, {
+    shabbat: { candles: '', kabbalat: '', shacharit: '', mincha: '', arvit: '' },
+  });
+  assert.strictEqual((await (await fetch(`${base}/settings`)).json()).shabbat.candles, '');
+});
+
+test('PUT /api/content/settings rejects a malformed time with a field error', async () => {
+  const res = await send('PUT', `${base}/settings`, { shabbat: { mincha: '25:61' } });
+  const body = await res.json();
+
+  assert.strictEqual(res.status, 400);
+  assert.ok(body.errors.mincha);
+  // Nothing was written.
+  assert.strictEqual((await (await fetch(`${base}/settings`)).json()).shabbat.mincha, '');
+});
+
+// --- The ticker panel -------------------------------------------------------------
+
+test('ticker is a panel like any other', async () => {
+  const created = await (await send('POST', `${base}/ticker`, { text: 'שורה חדשה בפס' })).json();
+  assert.strictEqual(created.isActive, true);
+  assert.strictEqual(created.text, 'שורה חדשה בפס');
+
+  const hidden = await (
+    await send('PUT', `${base}/ticker/${created.id}`, { text: 'שורה חדשה בפס', isActive: false })
+  ).json();
+  assert.strictEqual(hidden.isActive, false);
+
+  const del = await send('DELETE', `${base}/ticker/${created.id}`);
+  assert.strictEqual(del.status, 200);
+
+  const list = await (await fetch(`${base}/ticker`)).json();
+  assert.strictEqual(list.some((it) => it.id === created.id), false);
+});
+
+test('ticker rejects a blank line', async () => {
+  const res = await send('POST', `${base}/ticker`, { text: '   ' });
+
+  assert.strictEqual(res.status, 400);
+  assert.ok((await res.json()).errors.text);
+});

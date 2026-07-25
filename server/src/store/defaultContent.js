@@ -29,6 +29,20 @@ module.exports = {
     { id: 'seed-azk-2', name: 'חנה נינט ריין בת פרטונה ז״ל', detail: 'תנצב״ה', date: "ה' בתמוז", isActive: true },
     { id: 'seed-azk-3', name: 'רוברט ישראל בן רוזי ז״ל', detail: 'לעילוי נשמת', date: 'כ״ג בטבת', isActive: true },
   ],
+  // The bottom ticker, one item per line. These four are the string that lived in
+  // client/src/components/display/displayData.js as TICKER, split on its • separators, so
+  // a server that upgrades into this feature shows exactly what it showed before.
+  ticker: [
+    { id: 'seed-tic-1', text: 'בית כנסת נווה רחמים', isActive: true },
+    { id: 'seed-tic-2', text: 'נא לכבד את קדושת בית הכנסת ולכבות את הטלפונים', isActive: true },
+    { id: 'seed-tic-3', text: 'נדבת משפחת בן חמו לעילוי נשמת משה בן פרטונה', isActive: true },
+    { id: 'seed-tic-4', text: 'לתרומות והנצחות פנו לגבאי · 054-848-7595', isActive: true },
+  ],
+  // Fixed שבת times set by the gabbai. '' means "compute it from the zmanim", which is
+  // the default for all five — see resolveShabbatTimes in the client.
+  settings: {
+    shabbat: { candles: '', kabbalat: '', shacharit: '', mincha: '', arvit: '' },
+  },
   // בדיחות ליאור. Scraped jokes are appended to this list at runtime
   // (server/src/jokes/refresh.js); these thirty are what the wall shows before the first
   // scrape, and what remains if yo-yoo is never reachable. Every one of them passes

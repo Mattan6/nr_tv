@@ -1,6 +1,6 @@
 const { randomUUID } = require('node:crypto');
 const { contentStore, NotFoundError } = require('../store/contentStore');
-const { isPanel, validateItem, MAX_ITEMS } = require('../store/panels');
+const { isPanel, validateItem, validateSettings, MAX_ITEMS } = require('../store/panels');
 
 // One controller for all four panels — they differ only in their fields, and
 // store/panels.js already describes that difference.
@@ -79,4 +79,27 @@ const deleteItem = handler(async (req, res) => {
   res.json({ message: 'הפריט נמחק' });
 });
 
-module.exports = { getContent, getPanel, createItem, updateItem, deleteItem };
+// The שבת time overrides: one record rather than a list, so it has its own pair of
+// handlers instead of going through the panel routes above. `handler` still wraps them —
+// its panel check is skipped because these routes carry no :panel param.
+
+const getSettings = handler(async (req, res) => {
+  const doc = await contentStore.read();
+  res.json(doc.settings);
+});
+
+// A PUT replaces the whole record. validateSettings always returns all five keys, so a
+// body that omits one clears it rather than leaving a stale override behind — which is
+// what makes "empty the field to go back to automatic" work from the form.
+const updateSettings = handler(async (req, res) => {
+  const { settings, errors } = validateSettings(req.body);
+  if (errors) return res.status(400).json({ message: 'שדות לא תקינים', errors });
+
+  const saved = await contentStore.update((draft) => {
+    draft.settings = settings;
+    return settings;
+  });
+  res.json(saved);
+});
+
+module.exports = { getContent, getPanel, createItem, updateItem, deleteItem, getSettings, updateSettings };
