@@ -1,4 +1,3 @@
-import { TICKER } from '../components/display/displayData';
 import * as S from '../components/mobile/mobileStyles';
 import MobileHeader from '../components/mobile/MobileHeader';
 import NextMinyanHero from '../components/mobile/NextMinyanHero';
@@ -24,6 +23,7 @@ const MobileDisplay = () => {
     next,
     zmanimRows,
     shiurim,
+    ticker,
     ann,
     maz,
     azk,
@@ -65,7 +65,7 @@ const MobileDisplay = () => {
 
         <JokesCard joke={joke} jokeKey={jokeTick} />
 
-        <TickerLines text={TICKER} />
+        <TickerLines items={ticker} />
       </div>
     </div>
   );

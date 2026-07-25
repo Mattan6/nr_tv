@@ -52,10 +52,16 @@ export default function useDisplayModel() {
   // JOKE_ROTATE_MS. Same render-time modulo as `pick` below, for the same reason: the pool
   // grows when the server scrapes, and an index must never point past the current list.
   const [jokeTick, setJokeTick] = useState(0);
-  const { announcements, shiurim, mazal, azkarot, jokes } = useDisplayContent();
+  const { announcements, shiurim, mazal, azkarot, jokes, ticker, settings } = useDisplayContent();
   const [zmanimTimes, setZmanimTimes] = useState(null);
   const [minchaTime, setMinchaTime] = useState(null);
-  const [shabbatTimes, setShabbatTimes] = useState({});
+  // The raw Hebcal anchors, NOT the five resolved שבת times. They are kept apart because
+  // the overrides that turn anchors into displayed times arrive on the 30-second content
+  // poll while these arrive on a six-hour one: resolving inside the fetch would leave a
+  // time the gabbai just pinned unshown for up to six hours, and adding the overrides to
+  // the effect's dependencies would instead re-request Hebcal four times every poll.
+  // Resolved at render instead — it is string arithmetic, and it costs nothing.
+  const [shabbatAnchorTimes, setShabbatAnchorTimes] = useState({});
   const [parasha, setParasha] = useState('');
 
   // Tick the clock / date every second.
@@ -109,12 +115,10 @@ export default function useDisplayModel() {
       }
       setZmanimTimes(value(z)?.times || null);
       setMinchaTime(weeklyMinchaTime(value(zThu)?.times?.sunset));
-      setShabbatTimes(
-        resolveShabbatTimes({
-          ...shabbatAnchors(value(p), saturday),
-          saturdaySunset: value(zSat)?.times?.sunset,
-        })
-      );
+      setShabbatAnchorTimes({
+        ...shabbatAnchors(value(p), saturday),
+        saturdaySunset: value(zSat)?.times?.sunset,
+      });
       const parashaItem = value(p)?.items?.find((it) => it.category === 'parashat');
       setParasha(parashaItem?.hebrew || '');
     };
@@ -163,6 +167,9 @@ export default function useDisplayModel() {
   }
 
   const isShab = screen === 'shabbat';
+  // The gabbai's pinned שבת times (blank = compute it) applied to this week's anchors.
+  // See the comment on shabbatAnchorTimes above for why this is not done in the fetch.
+  const shabbatTimes = resolveShabbatTimes(shabbatAnchorTimes, SHABBAT_CONFIG, settings.shabbat);
   // Each schedule gets its own computed map — both lists would otherwise collide
   // on a key named `mincha` holding different values.
   const prayers = resolvePrayers(
@@ -210,6 +217,7 @@ export default function useDisplayModel() {
     zmanimRows,
     // Admin-edited content
     shiurim,
+    ticker,
     ann,
     maz,
     azk,

@@ -87,14 +87,12 @@ export const ZMANIM_ROWS = [
   { id: 'tzeitRT', name: 'צאת ר״ת', field: 'tzeit72min' },
 ];
 
-// שיעורים / הודעות / מזל טוב / אזכרות are no longer static — they are edited in
-// /adminGabbai and served from the API. בדיחות ליאור travels in the same document but is
-// scraped and filtered by the server (server/src/jokes/) rather than edited by anyone.
-// Seed values for all of them live in server/src/store/defaultContent.js; the display
-// fetches them via useDisplayContent. TICKER below stays static for now.
-
-export const TICKER =
-  'בית כנסת נווה רחמים  •  נא לכבד את קדושת בית הכנסת ולכבות את הטלפונים  •  נדבת משפחת בן חמו לעילוי נשמת משה בן פרטונה  •  לתרומות והנצחות פנו לגבאי · 054-848-7595  •  ';
+// שיעורים / הודעות / מזל טוב / אזכרות / הפס התחתון are no longer static — they are edited
+// in /adminGabbai and served from the API, as are the שבת time overrides applied by
+// resolveShabbatTimes below. בדיחות ליאור travels in the same document but is scraped and
+// filtered by the server (server/src/jokes/) rather than edited by anyone. Seed values for
+// all of them live in server/src/store/defaultContent.js; the display fetches them via
+// useDisplayContent. Nothing on either screen is a literal in this file any more.
 
 // Every clock time on the display is rendered in Israel's timezone, never the
 // device's — the prayer rows and זמנים rows through `toClock` below, and the header
@@ -340,21 +338,56 @@ export function shabbatAnchors(shabbatResponse, saturday) {
   };
 }
 
+// Adds minutes to an 'HH:MM' string.
+//
+// Needed only because an override carries no date: `toClock` does its arithmetic on the
+// epoch, which a bare clock time cannot be fed into, and קבלת שבת has to be derivable from
+// a הדלקת נרות the gabbai typed as readily as from one Hebcal sent.
+//
+// Wraps at midnight rather than rendering '24:05' for 23:50 + 15.
+export function addMinutesToClock(clock, minutes) {
+  if (typeof clock !== 'string') return null;
+  const parts = clock.match(/^(\d{1,2}):(\d{2})$/);
+  if (!parts) return null;
+  const total = ((((Number(parts[1]) * 60 + Number(parts[2]) + minutes) % 1440) + 1440) % 1440);
+  const pad2 = (n) => String(n).padStart(2, '0');
+  return `${pad2(Math.floor(total / 60))}:${pad2(total % 60)}`;
+}
+
 // Three anchors in, five display times out. Any missing anchor yields null, which
 // resolvePrayers renders as "--:--" — never a stale or invented time. An
 // undetermined season does the same to the three rows that depend on one.
+//
+// `overrides` are the fixed times the gabbai pinned in /adminGabbai (content.json's
+// settings.shabbat), keyed by the five short names. A blank means "compute it", which is
+// the default for every row.
 export function resolveShabbatTimes(
   { candles, havdalah, saturdaySunset } = {},
-  config = SHABBAT_CONFIG
+  config = SHABBAT_CONFIG,
+  overrides = {}
 ) {
   const summer = isSummerTime(candles || saturdaySunset || havdalah);
   const season = summer === null ? null : summer ? 'summer' : 'winter';
+  // An override is a stated fact, not a derivation, so it needs neither Hebcal nor a known
+  // season to have worked. `pin` therefore short-circuits ahead of every automatic branch,
+  // including the three that blank when the season is undetermined — a pinned row is
+  // strictly more robust than the computed one it replaces.
+  const pin = (key, auto) => overrides[key] || auto;
+
+  // Resolved first because קבלת שבת is derived from it, and must be derived from what the
+  // row ABOVE actually says. Chaining off Hebcal's timestamp while הדלקת נרות displayed
+  // the gabbai's number would put two contradicting times side by side.
+  const shabCandles = pin('candles', toClock(candles));
+
   return {
-    shabCandles: toClock(candles),
-    shabKabbalat: season ? toClock(candles, config.kabbalatAfterCandlesMin[season]) : null,
-    shabShacharit: season ? config.shacharit[season] : null,
-    shabMincha: toClock(saturdaySunset, -config.minchaBeforeSunsetMin),
-    shabArvit: arvitTime(season, { havdalah, saturdaySunset }, config),
+    shabCandles,
+    shabKabbalat: pin(
+      'kabbalat',
+      season && shabCandles ? addMinutesToClock(shabCandles, config.kabbalatAfterCandlesMin[season]) : null
+    ),
+    shabShacharit: pin('shacharit', season ? config.shacharit[season] : null),
+    shabMincha: pin('mincha', toClock(saturdaySunset, -config.minchaBeforeSunsetMin)),
+    shabArvit: pin('arvit', arvitTime(season, { havdalah, saturdaySunset }, config)),
   };
 }
 

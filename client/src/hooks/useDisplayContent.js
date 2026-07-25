@@ -6,13 +6,22 @@ const CACHE_KEY = 'synagogue-display-content';
 // `jokes` is scraper-owned rather than admin-edited, but it travels in the same document
 // and carries the same isActive flag, so it needs nothing special here beyond a key —
 // activeOnly derives its panel list from this object.
-const EMPTY = { announcements: [], shiurim: [], mazal: [], azkarot: [], jokes: [] };
+const EMPTY_LISTS = { announcements: [], shiurim: [], mazal: [], azkarot: [], jokes: [], ticker: [] };
+
+// The שבת time overrides. A single record rather than a list — there is nothing to filter,
+// only to default, and it is defaulted rather than passed straight through because a
+// document cached before this feature existed carries no `settings` at all.
+const EMPTY_SETTINGS = { shabbat: {} };
+
+const EMPTY = { ...EMPTY_LISTS, settings: EMPTY_SETTINGS };
 
 // Keep only the items the gabbai has left visible, per panel.
-const activeOnly = (doc) =>
-  Object.fromEntries(
-    Object.keys(EMPTY).map((key) => [key, (doc?.[key] || []).filter((it) => it.isActive)])
-  );
+const activeOnly = (doc) => ({
+  ...Object.fromEntries(
+    Object.keys(EMPTY_LISTS).map((key) => [key, (doc?.[key] || []).filter((it) => it.isActive)])
+  ),
+  settings: { shabbat: doc?.settings?.shabbat || {} },
+});
 
 const readCache = () => {
   try {

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { TICKER } from '../components/display/displayData';
 import TopBar from '../components/display/TopBar';
 import PrayerTimesPanel from '../components/display/PrayerTimesPanel';
 import ZmanimPanel from '../components/display/ZmanimPanel';
@@ -29,6 +28,7 @@ const SynagogueDisplay = () => {
     next,
     zmanimRows,
     shiurim,
+    ticker,
     ann,
     maz,
     azk,
@@ -118,7 +118,7 @@ const SynagogueDisplay = () => {
           </div>
 
           {/* Ticker */}
-          <Ticker text={TICKER} />
+          <Ticker items={ticker} />
         </div>
       </div>
     </div>
