@@ -12,7 +12,13 @@ import useDisplayModel from '../hooks/useDisplayModel';
 // value it renders comes from useDisplayModel, which the phone layout also calls — see
 // pages/MobileDisplay.jsx. Only the canvas scale is computed here, because only this
 // layout has a canvas.
-const SynagogueDisplay = () => {
+//
+// safeArea holds back a fraction of each axis before fitting, for TVs that crop their own
+// edges — pages/TvDisplay.jsx passes it. Zero is a no-op, so / fits exactly as it always
+// has. It is a scale input rather than padding on a wrapper because the fit below measures
+// the window and not this component's box: an inset wrapper would keep the full-window
+// scale and crop the canvas instead of shrinking it.
+const SynagogueDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
   const [scale, setScale] = useState(1);
   const {
     screen,
@@ -37,13 +43,22 @@ const SynagogueDisplay = () => {
     jokeTick,
   } = useDisplayModel();
 
-  // Scale the fixed 1920x1080 canvas to fit the screen.
+  // Scale the fixed 1920x1080 canvas to fit the screen, less the safe area. Depends on
+  // the two numbers rather than the object so a caller passing an inline literal does not
+  // re-subscribe on every render.
+  const { x: safeX, y: safeY } = safeArea;
   useEffect(() => {
-    const fit = () => setScale(Math.min(window.innerWidth / 1920, window.innerHeight / 1080));
+    const fit = () =>
+      setScale(
+        Math.min(
+          (window.innerWidth * (1 - 2 * safeX)) / 1920,
+          (window.innerHeight * (1 - 2 * safeY)) / 1080
+        )
+      );
     fit();
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
-  }, []);
+  }, [safeX, safeY]);
 
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#070a10' }}>

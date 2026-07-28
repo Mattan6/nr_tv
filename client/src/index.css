@@ -46,6 +46,18 @@ body::before {
   overflow: hidden;
 }
 
+/* TV only. Scoped to the [data-tv] wrapper that pages/TvDisplay.jsx renders, so no other
+   route is touched.
+
+   On a TV there is no pointer: the focus ring IS the cursor, and an invisible one leaves
+   the viewer pressing arrows with nothing on screen to say where they are. Wider and
+   further out than a desktop ring would be, because it is being read across a room. */
+[data-tv] :is(a, button, [role='button'], input, select, textarea):focus-visible {
+  outline: 3px solid #e9cf94;
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
 /* Custom scrollbar for admin */
 ::-webkit-scrollbar {
   width: 8px;

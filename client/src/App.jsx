@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import SynagogueDisplay from './pages/SynagogueDisplay';
 import MobileDisplay from './pages/MobileDisplay';
+import TvDisplay from './pages/TvDisplay';
 import Zmanim from './pages/Zmanim';
 import AdminHome from './pages/admin/AdminHome';
 import PanelList from './pages/admin/PanelList';
@@ -33,6 +34,10 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<DisplayRoot />} />
+          {/* The exception to the rule above. An Android TV browser reports about 960x540,
+              which DisplayRoot reads as a phone; /tv overrides the viewport instead of the
+              detection, so the same wall layout arrives at a size it can be read at. */}
+          <Route path="/tv" element={<TvDisplay />} />
           <Route path="/zmanim" element={<Zmanim />} />
           <Route path="/adminGabbai" element={<AdminHome />} />
           {/* Above /:panel for the reader's benefit. React Router ranks static segments

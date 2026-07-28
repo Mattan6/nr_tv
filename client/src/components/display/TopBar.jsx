@@ -22,6 +22,16 @@ const TOGGLE_IDLE = {
   border: '1px solid rgba(201,168,106,0.28)',
 };
 
+// A remote's OK button arrives as Enter, and a div with role=button does not turn either
+// Enter or Space into a click the way a real <button> would. Without this the toggles are
+// reachable on the TV route (see pages/TvDisplay.jsx) and impossible to press. Purely
+// additive — the pointer path below is untouched.
+const activate = (fn) => (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  e.preventDefault();
+  fn();
+};
+
 const TopBar = ({ weekday, hebDate, greg, parasha, screen, onSetChol, onSetShab }) => {
   const isShab = screen === 'shabbat';
   return (
@@ -51,8 +61,8 @@ const TopBar = ({ weekday, hebDate, greg, parasha, screen, onSetChol, onSetShab 
       {/* Left: chol/shabbat toggle + BH */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px' }}>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <div role="button" tabIndex={0} onClick={onSetChol} style={isShab ? TOGGLE_IDLE : TOGGLE_ACTIVE}>חול</div>
-          <div role="button" tabIndex={0} onClick={onSetShab} style={isShab ? TOGGLE_ACTIVE : TOGGLE_IDLE}>שבת</div>
+          <div role="button" tabIndex={0} onClick={onSetChol} onKeyDown={activate(onSetChol)} style={isShab ? TOGGLE_IDLE : TOGGLE_ACTIVE}>חול</div>
+          <div role="button" tabIndex={0} onClick={onSetShab} onKeyDown={activate(onSetShab)} style={isShab ? TOGGLE_ACTIVE : TOGGLE_IDLE}>שבת</div>
         </div>
         <div style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: '19px', color: '#6f7889', letterSpacing: '1px' }}>ב״ה</div>
       </div>

@@ -4,6 +4,26 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      /tv only: an Android TV WebView runs at ~320dpi on a 1080p panel, so device-width
+      reports about 960x540 and the layout picker in hooks/useIsMobile.js answers with the
+      phone layout. A fixed 1280 clears both of its clauses and lands the wall layout at
+      roughly 1.5 device pixels per CSS pixel — readable from the couch, which a 1:1 1920
+      would not be.
+
+      Here in the head rather than only in pages/TvDisplay.jsx so the first paint already
+      has the right viewport; TvDisplay repeats it for client-side navigation. Gated on
+      the pathname, so every other route keeps device-width untouched.
+
+      No initial-scale on purpose: with both present Chromium resolves the layout viewport
+      to max(width, deviceWidth / initial-scale) and pins zoom to 1, which would show 960
+      of the 1280 pixels and crop the display. width alone lets it fit to the panel.
+    -->
+    <script>
+      if (location.pathname === '/tv' || location.pathname === '/tv/') {
+        document.querySelector('meta[name=viewport]').setAttribute('content', 'width=1280');
+      }
+    </script>
     <title>client</title>
   </head>
   <body>
