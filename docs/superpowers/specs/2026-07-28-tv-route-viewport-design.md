@@ -67,6 +67,11 @@ stylesheet.
 
 ### Viewport override
 
+> **Superseded — see "Revision: the override was the bug" at the end of this document.**
+> Testing on the actual TV showed the WebView honours a fixed width for layout and then
+> declines to zoom out to fit it, which crops the display. `/tv` ships with plain
+> `width=device-width`. The rest of this section records the reasoning that was tried.
+
 `client/index.html` gets a pathname-gated inline script that rewrites the meta tag before
 the SPA boots, so there is no first-paint reflow:
 
@@ -174,3 +179,58 @@ device toolbar (device emulation) to be on, which honors the meta tag.
 5. Navigate `/tv` -> `/` in-app — the viewport meta reads `width=device-width` again.
 6. `/`, `/zmanim`, `/adminGabbai` at desktop and phone sizes — unchanged.
 7. `git diff` confirms no change to `server/`, `vite.config.js`, or `useIsMobile.js`.
+
+## Revision: the override was the bug
+
+On the actual TV the wall layout arrived cropped — roughly a quarter of it hanging off the
+right and bottom edges, the `זמני תפילות` panel sliced and the ticker gone entirely.
+
+Measured against known canvas geometry the rendered canvas scale was about 0.87 rather
+than the 0.61 the formula produces at 1280x720, and the canvas centre sat right of and
+below the centre of the screen: it had been fitted to something larger than the visible
+area and then centred in it.
+
+Reproduced by pinning Chromium's page scale factor to 1 while leaving the meta tag in
+place, which is what an Android WebView does with `useWideViewPort` set and
+`loadWithOverviewMode` not set — the width is honoured for layout, the fit-to-width zoom
+never happens:
+
+| route | meta | layout vp | visual vp | canvas | overflow |
+|---|---|---|---|---|---|
+| `/tv` | `width=1280` | 1280x720 | 960x540 | 1178x662 | right 269, bottom 151 |
+| `/` | `width=device-width` | 960x540 | 960x540 | 960x540 | none |
+
+The root cause is the override itself. `SynagogueDisplay` fits its canvas to
+`window.innerWidth/innerHeight`, which report the *layout* viewport, so it correctly filled
+1280x720 while the panel could only ever show 960x540 of it. A fixed width can only crop
+here; nothing downstream can compensate, because the layout viewport is the only size the
+page can see.
+
+It also turns out the override was never load-bearing:
+
+- **It was not what produced the wall layout.** `TvDisplay` renders `SynagogueDisplay`
+  directly and never consults `useIsMobile`, so the route forces the wall layout by
+  construction. That was already true.
+- **It did not make anything physically bigger,** which was its entire justification. The
+  canvas fills the panel either way, so a 100px canvas glyph lands at 100 device pixels
+  under both: `0.5 x 100 x dpr 2` at device-width, `0.667 x 100 x 1.5` at width 1280.
+
+So `/tv` keeps `width=device-width` like every other route, and `client/index.html` is back
+to a single unconditional meta tag. Everything else in this design stands: the route, the
+safe area, the scoped focus ring and the TopBar key activation are unchanged.
+
+The lesson for anyone tempted to re-add a fixed width: on a TV, a viewport wider than the
+panel is not a zoom instruction, it is a promise the browser may decline to keep.
+
+### Verification, revised
+
+19 checks, all passing, in Edge/Chromium with `isMobile: true`:
+
+- `/tv` fits inside the visible area with the zoom disabled at 960x540, 960x492 and
+  1280x720 — the case that was broken.
+- Safe-area margins hold at 4.0% and 4.0% of the panel.
+- `/tv` renders the wall layout at 960x492, 820x460 and even 390x844.
+- `/` still answers wall at 960x540 and 1920x1080, phone at 960x492 and 390x844.
+- `/`, `/tv`, `/zmanim` and `/adminGabbai` all report `width=device-width`.
+- Both toggles ring gold at 3px; Enter and Space each activate them; `/` never picks up
+  the TV ring.
