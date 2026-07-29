@@ -1,5 +1,6 @@
 import SynagogueDisplay from './SynagogueDisplay';
 import KeepAwake from '../components/KeepAwake';
+import NightlyReload from '../components/NightlyReload';
 
 // TVs crop the panel edges, and how much varies by set. Pulling the canvas in by this
 // much costs a little size and buys back the top bar and the ticker, which sit at the
@@ -30,6 +31,10 @@ const TvDisplay = () => (
         "never", so the page has to hold the screen itself. Mounted only here: this is the
         one import site, which is what keeps the wake lock off every other route. */}
     <KeepAwake />
+    {/* Nothing else ever reloads this page, so a deploy would never reach the TV — and
+        KeepAwake removes the sleep/wake cycles that used to do it by accident. Same one
+        import site rule: a phone must never reload under the reader. */}
+    <NightlyReload />
     <SynagogueDisplay safeArea={TV_SAFE_AREA} />
   </div>
 );
