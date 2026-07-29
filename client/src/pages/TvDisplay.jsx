@@ -1,4 +1,5 @@
 import SynagogueDisplay from './SynagogueDisplay';
+import KeepAwake from '../components/KeepAwake';
 
 // TVs crop the panel edges, and how much varies by set. Pulling the canvas in by this
 // much costs a little size and buys back the top bar and the ticker, which sit at the
@@ -25,6 +26,10 @@ const TvDisplay = () => (
   // Holds no layout of its own — only the attribute the TV-only focus rules in index.css
   // hang off. SynagogueDisplay positions itself against the viewport exactly as on /.
   <div data-tv>
+    {/* The box's screensaver takes the screen after a few minutes and its firmware offers no
+        "never", so the page has to hold the screen itself. Mounted only here: this is the
+        one import site, which is what keeps the wake lock off every other route. */}
+    <KeepAwake />
     <SynagogueDisplay safeArea={TV_SAFE_AREA} />
   </div>
 );
