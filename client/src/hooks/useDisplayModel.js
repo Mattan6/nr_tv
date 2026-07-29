@@ -64,6 +64,15 @@ export default function useDisplayModel() {
   const [shabbatAnchorTimes, setShabbatAnchorTimes] = useState({});
   const [parasha, setParasha] = useState('');
 
+  // Israel's wall clock and calendar, never the device's — see israelParts. A TV whose
+  // timezone was set wrong at install must not read 16:43 above a זמנים panel posting
+  // שקיעה 19:43.
+  //
+  // Hoisted above the effects because the Hebcal load below depends on the calendar DAY.
+  // `now` changes every second; this string changes once, at 00:00 Israel time.
+  const nowIL = israelParts(now);
+  const israelDayKey = `${nowIL.year}-${pad(nowIL.month)}-${pad(nowIL.day)}`;
+
   // Tick the clock / date every second.
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -128,7 +137,21 @@ export default function useDisplayModel() {
       cancelled = true;
       clearInterval(id);
     };
-  }, []);
+    // Keyed on Israel's calendar day, so the whole effect tears down and re-runs within a
+    // second of 00:00. Everything it fetches is date-stamped — today's zmanim, this week's
+    // parasha, the anchors for `upcomingSaturday` — and none of it was being re-read at the
+    // boundary where it changes.
+    //
+    // The interval alone could not cover this. setInterval is phased from mount, and since
+    // 6h divides 24h that phase never drifts: a TV whose browser was opened at 23:58
+    // refreshed at 05:58 every night thereafter, so from 00:00 it served the previous day's
+    // data for just under six hours, permanently, with nothing on screen to say so. Zmanim
+    // drift only a minute a day, but `upcomingSaturday` jumps a whole week at Sunday 00:00 —
+    // that window posted last week's parasha and last Shabbat's candle lighting.
+    //
+    // It still runs every 6h as a backstop for a failed load; keying it here just means the
+    // phase is now anchored to midnight rather than to whenever someone opened the browser.
+  }, [israelDayKey]);
 
   // Follow the calendar: שבת from Friday 09:00, back to חול at Sunday 00:00. The TV
   // stays powered for weeks, so a page opened on Tuesday must not still be showing
@@ -149,10 +172,7 @@ export default function useDisplayModel() {
   const screen = override && override.segmentKey === segmentKey ? override.screen : scheduled;
   const setScreen = (value) => setOverride({ screen: value, segmentKey });
 
-  // Israel's wall clock and calendar, never the device's — see israelParts. A TV
-  // whose timezone was set wrong at install must not read 16:43 above a זמנים panel
-  // posting שקיעה 19:43.
-  const nowIL = israelParts(now);
+  // nowIL is declared above the effects — see the note there on israelDayKey.
   const clock = `${pad(nowIL.hour)}:${pad(nowIL.minute)}:${pad(nowIL.second)}`;
   let hebDate = '';
   let greg = '';
