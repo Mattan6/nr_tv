@@ -4,15 +4,19 @@
 
 // Weekday (חול) prayers. Each entry is one of:
 //   { time: 'HH:MM' }                     — a fixed clock time
-//   { from: '<zmanim field>', offsetMin } — derived from TODAY's zmanim
-//                                           (e.g. sunrise = הנץ)
+//   { from: '<zmanim field>', offsetMin } — derived from TODAY's zmanim. No entry uses
+//                                           this today: הנץ moved to `computed` when it
+//                                           began posting TOMORROW's sunrise from 07:30
+//                                           (see netzPrayerDate). Kept as the way to
+//                                           declare a row that does track today.
 //   { computed: '<key>' }                 — a value the container computes and
 //                                           passes to resolvePrayers (e.g. the
-//                                           weekly מנחה time)
+//                                           weekly מנחה time, or the הנץ of whichever
+//                                           date netzPrayerDate picks)
 //   { text, afterName }                   — literal text shown instead of a
 //                                           time; the countdown follows afterName
 export const WEEKDAY_PRAYERS = [
-  { name: 'שחרית מניין א׳ (הנץ)', from: 'sunrise' },
+  { name: 'שחרית מניין א׳ (הנץ)', computed: 'netz' },
   { name: 'שחרית מניין ב׳', time: '08:15' },
   { name: 'מנחה', computed: 'mincha' },
   { name: 'ערבית', text: 'מיד לאחר מנחה', afterName: 'מנחה' },

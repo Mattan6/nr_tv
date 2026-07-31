@@ -8,6 +8,7 @@ import {
   resolvePrayers,
   computeNextMinyan,
   governingThursday,
+  netzPrayerDate,
   weeklyMinchaTime,
   upcomingSaturday,
   shabbatAnchors,
@@ -55,6 +56,11 @@ export default function useDisplayModel() {
   const { announcements, shiurim, mazal, azkarot, jokes, ticker, settings } = useDisplayContent();
   const [zmanimTimes, setZmanimTimes] = useState(null);
   const [minchaTime, setMinchaTime] = useState(null);
+  // The הנץ the שחרית row posts, already formatted. Its own state rather than a field on
+  // zmanimTimes: from 07:30 it is TOMORROW's sunrise, while zmanimTimes stays on today for
+  // the זמנים panel. Folding them together would make one object mean two dates depending on
+  // which consumer asked, and the difference would be invisible at both call sites.
+  const [netzTime, setNetzTime] = useState(null);
   // The raw Hebcal anchors, NOT the five resolved שבת times. They are kept apart because
   // the overrides that turn anchors into displayed times arrive on the 30-second content
   // poll while these arrive on a six-hour one: resolving inside the fetch would leave a
@@ -72,6 +78,14 @@ export default function useDisplayModel() {
   // `now` changes every second; this string changes once, at 00:00 Israel time.
   const nowIL = israelParts(now);
   const israelDayKey = `${nowIL.year}-${pad(nowIL.month)}-${pad(nowIL.day)}`;
+
+  // The second boundary the load effect below has to re-run at: 07:30, when the הנץ row
+  // switches to tomorrow's sunrise (netzPrayerDate). Derived from `now` for the same reason
+  // israelDayKey is — `now` already ticks once a second, so React re-runs the effect on the
+  // tick that crosses the boundary. A setTimeout aimed at 07:30 would have to survive
+  // backgrounding, throttling and remounts; a derived key has nothing to survive.
+  const netzDate = netzPrayerDate(now);
+  const netzDayKey = `${netzDate.getFullYear()}-${pad(netzDate.getMonth() + 1)}-${pad(netzDate.getDate())}`;
 
   // Tick the clock / date every second.
   useEffect(() => {
@@ -94,15 +108,15 @@ export default function useDisplayModel() {
 
   // Live zmanim (Nitzan) + this week's parasha, candle lighting and havdalah.
   //
-  // allSettled, not all: the four requests feed four independent parts of the
-  // screen, and one failing must not blank or freeze the other three. Every branch
+  // allSettled, not all: the five requests feed five independent parts of the
+  // screen, and one failing must not blank or freeze the other four. Every branch
   // also *assigns* — a rejected leg is written back as null so its panel falls to
   // "--:--". Leaving the previous value in place would quietly post last week's
   // times through an outage, which is worse than showing nothing.
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      // All three dates come off Israel's calendar, not the device's: east of Israel
+      // All four dates come off Israel's calendar, not the device's: east of Israel
       // `new Date()` has already rolled over for part of every evening, so "today's
       // zmanim" would be tomorrow's and `upcomingSaturday` would skip to next week's
       // Shabbat while the hall was still sitting in this one. Each helper takes the
@@ -110,20 +124,28 @@ export default function useDisplayModel() {
       const instant = new Date();
       const today = israelToday(instant);
       const saturday = upcomingSaturday(instant);
-      const [z, zThu, zSat, p] = await Promise.allSettled([
+      const [z, zThu, zSat, zNetz, p] = await Promise.allSettled([
         getZmanim(today),
         getZmanim(governingThursday(instant)),
         getZmanim(saturday),
+        // Requested unconditionally, including before 07:30 when this is the same date the
+        // first leg already asked for. One uniform path, at the cost of a duplicated request
+        // four times a day — the branch that would save it has to be right on both sides of
+        // a boundary that moves once a day, which is more than the request is worth.
+        getZmanim(netzPrayerDate(instant)),
         getParasha(SHABBAT_CONFIG.candleLightingMinBeforeSunset),
       ]);
       if (cancelled) return;
       const value = (r) => (r.status === 'fulfilled' ? r.value : null);
-      const failures = [z, zThu, zSat, p].filter((r) => r.status === 'rejected');
+      const failures = [z, zThu, zSat, zNetz, p].filter((r) => r.status === 'rejected');
       if (failures.length) {
         console.error('Failed to load display data:', failures.map((r) => r.reason));
       }
       setZmanimTimes(value(z)?.times || null);
       setMinchaTime(weeklyMinchaTime(value(zThu)?.times?.sunset));
+      // toClock already answers null for a missing or unparsable time, which resolvePrayers
+      // renders as "--:--" — the row blanks rather than holding yesterday's number.
+      setNetzTime(toClock(value(zNetz)?.times?.sunrise));
       setShabbatAnchorTimes({
         ...shabbatAnchors(value(p), saturday),
         saturdaySunset: value(zSat)?.times?.sunset,
@@ -151,7 +173,12 @@ export default function useDisplayModel() {
     //
     // It still runs every 6h as a backstop for a failed load; keying it here just means the
     // phase is now anchored to midnight rather than to whenever someone opened the browser.
-  }, [israelDayKey]);
+    //
+    // netzDayKey adds the second boundary, 07:30, where the הנץ row switches to tomorrow's
+    // sunrise. Re-running restarts the six-hour interval, so its phase now hangs off both
+    // boundaries: loads land at 00:00, 06:00, 07:30, 13:30 and 19:30 — never more than six
+    // hours apart, which is the only thing that interval was ever there to guarantee.
+  }, [israelDayKey, netzDayKey]);
 
   // Follow the calendar: שבת from Friday 09:00, back to חול at Sunday 00:00. The TV
   // stays powered for weeks, so a page opened on Tuesday must not still be showing
@@ -195,7 +222,7 @@ export default function useDisplayModel() {
   const prayers = resolvePrayers(
     isShab ? SHABBAT_PRAYERS : WEEKDAY_PRAYERS,
     zmanimTimes,
-    isShab ? shabbatTimes : { mincha: minchaTime }
+    isShab ? shabbatTimes : { mincha: minchaTime, netz: netzTime }
   );
   const prayersTitle = isShab ? 'זמני תפילות · שבת' : 'זמני תפילות · חול';
   const prayersSub = isShab ? parasha || 'שבת קודש' : weekday;
