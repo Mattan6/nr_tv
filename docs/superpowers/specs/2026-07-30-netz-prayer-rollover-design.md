@@ -121,6 +121,8 @@ guarantee.
 | `/zmanim` | independent page, does not call `useDisplayModel`. |
 | Row label | unchanged. No "מחר" marker: the gap between today's and tomorrow's sunrise is about a minute, so there is nothing visible to explain, and מניין הבא already answers "what is next" with a countdown attached. |
 
+One consequence of that last decision is worth stating, because the argument above was made about the wall panel and the phone puts the two numbers closer together than the wall does. `NextMinyanHero` renders the מניין הבא time in 72px type with a zmanim strip about 60px below it, and that strip includes `הנץ החמה` read from `zmanimRows` — today's. From the evening onwards `next` is the הנץ row carrying **tomorrow's** sunrise while the strip below reads **today's**, so the two differ by roughly a minute where they previously always agreed. Both are correct in their own frame and the difference is well under anyone's notice threshold, so this is deliberately left alone rather than papered over with a marker — but it is a real juxtaposition the "nothing visible to explain" argument did not consider, and anyone revisiting the marker decision should start here.
+
 ## Files
 
 | File | Change |
