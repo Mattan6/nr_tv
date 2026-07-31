@@ -299,6 +299,29 @@ export function upcomingSaturday(now) {
   return israelDateAtNoon(p, (6 - p.weekday + 7) % 7);
 }
 
+// The date whose הנץ the שחרית מניין א׳ row posts: today until 07:30 Israel time, tomorrow
+// from 07:30 on. The minyan davens before six, so a row that only turned over at midnight
+// spent the whole day posting a time that had already passed — and the מניין הבא countdown,
+// which rolls forward to that row every evening, inherited the same stale minute.
+//
+// Continuous across midnight, which is what makes one boundary enough: at 00:00 "tomorrow"
+// becomes "today" and the same calendar date stays on screen, so the displayed date changes
+// at 07:30 and nowhere else. There is no second boundary and no window where two rules
+// disagree.
+//
+// Friday is deliberately NOT special-cased. The weekday board shows until 09:00 (see
+// screenSegment), so between 07:30 and 09:00 this posts Saturday's הנץ rather than Sunday's,
+// and this shul has no הנץ minyan on Shabbat. That is about a minute, in a ninety-minute
+// window, once a week — cheaper to accept than a permanent day-of-week rule here.
+//
+// Israel's clock, never the device's, like every other date helper above it: a TV whose
+// timezone was set wrong at install has to cross this boundary at 07:30 in Nitzan.
+export const NETZ_NEXT_DAY_FROM_MIN = 7 * 60 + 30;
+export function netzPrayerDate(now) {
+  const p = israelParts(now);
+  return israelDateAtNoon(p, p.hour * 60 + p.minute >= NETZ_NEXT_DAY_FROM_MIN ? 1 : 0);
+}
+
 // Calendar date ('YYYY-MM-DD') of one of the Israel-anchored Dates above, for
 // comparing against the first ten characters of a Hebcal timestamp. Built from the
 // date's own fields rather than toISOString(), which would answer in UTC and slide a
