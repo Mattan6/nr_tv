@@ -84,6 +84,9 @@ export default function useDisplayModel() {
   // israelDayKey is — `now` already ticks once a second, so React re-runs the effect on the
   // tick that crosses the boundary. A setTimeout aimed at 07:30 would have to survive
   // backgrounding, throttling and remounts; a derived key has nothing to survive.
+  // Reading Date getters here is safe and not an exception to the rule above: netzPrayerDate
+  // baked Israel's calendar fields into a local-noon Date, so building and reading back in the
+  // same zone are exact inverses — the same trick localYmd uses in displayData.js.
   const netzDate = netzPrayerDate(now);
   const netzDayKey = `${netzDate.getFullYear()}-${pad(netzDate.getMonth() + 1)}-${pad(netzDate.getDate())}`;
 
@@ -130,7 +133,7 @@ export default function useDisplayModel() {
         getZmanim(saturday),
         // Requested unconditionally, including before 07:30 when this is the same date the
         // first leg already asked for. One uniform path, at the cost of a duplicated request
-        // four times a day — the branch that would save it has to be right on both sides of
+        // twice a day — the branch that would save it has to be right on both sides of
         // a boundary that moves once a day, which is more than the request is worth.
         getZmanim(netzPrayerDate(instant)),
         getParasha(SHABBAT_CONFIG.candleLightingMinBeforeSunset),
@@ -178,6 +181,11 @@ export default function useDisplayModel() {
     // sunrise. Re-running restarts the six-hour interval, so its phase now hangs off both
     // boundaries: loads land at 00:00, 06:00, 07:30, 13:30 and 19:30 — never more than six
     // hours apart, which is the only thing that interval was ever there to guarantee.
+    //
+    // The load schedule above describes / and the phone; /tv runs unattended for weeks and
+    // reloads at 03:30 via NightlyReload.jsx, which remounts this hook and re-phases the
+    // six-hour interval. Loads there land at 00:00, 03:30, 07:30, 13:30 and 19:30 instead,
+    // but the never-more-than-six-hours-apart guarantee still holds.
   }, [israelDayKey, netzDayKey]);
 
   // Follow the calendar: שבת from Friday 09:00, back to חול at Sunday 00:00. The TV
