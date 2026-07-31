@@ -157,20 +157,24 @@ Expected: 11 `ok` lines and `all passing`, exit 0. The constant check prints not
 
 - [ ] **Step 5: Confirm the device's timezone cannot move the boundary**
 
-```bash
-TZ=Pacific/Auckland node "$SCRATCH/netz-date.mjs"
-TZ=America/Los_Angeles node "$SCRATCH/netz-date.mjs"
-```
-
-Expected: `all passing` under both. This is the constraint the helper exists to satisfy — if `netzPrayerDate` had read `now.getHours()` instead of `israelParts`, these two runs would disagree with the first.
-
-On Windows PowerShell there is no inline env-var prefix, so set and clear it around the runs. Use the same scratch directory as above:
+**On Windows, use PowerShell for this step.** Git Bash's inline `TZ=... node ...` form does *not* reach native `node.exe` — MSYS2 does not export the assignment into the child process, so `process.env.TZ` arrives `undefined`, the runtime falls back to the system zone, and all three runs silently execute in the same timezone. The step then reports `all passing` while having tested nothing. Confirmed on this machine: under Git Bash `TZ=Pacific/Auckland node -e "console.log(Intl.DateTimeFormat().resolvedOptions().timeZone)"` prints `Asia/Jerusalem`.
 
 ```powershell
 $SCRATCH = 'C:\Users\<you>\AppData\Local\Temp\netz-check'
 $env:TZ='Pacific/Auckland'; node "$SCRATCH\netz-date.mjs"
 $env:TZ='America/Los_Angeles'; node "$SCRATCH\netz-date.mjs"
 Remove-Item Env:\TZ
+```
+
+Expected: `all passing` under both, with output identical to the native-timezone run. This is the constraint the helper exists to satisfy — if `netzPrayerDate` had read `now.getHours()` instead of `israelParts`, these two runs would disagree with the first.
+
+Before trusting a pass, confirm the timezone actually changed: `node -e "console.log(process.env.TZ, Intl.DateTimeFormat().resolvedOptions().timeZone)"` must echo the zone you set. A verification step that cannot fail is worse than no step at all.
+
+On a Unix shell the inline form works and is fine:
+
+```bash
+TZ=Pacific/Auckland node "$SCRATCH/netz-date.mjs"
+TZ=America/Los_Angeles node "$SCRATCH/netz-date.mjs"
 ```
 
 - [ ] **Step 6: Lint**
