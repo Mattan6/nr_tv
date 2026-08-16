@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { screenSegment, shabbatFriday, upcomingSaturday } from '../src/components/display/displayData.js';
+import {
+  screenSegment,
+  shabbatFriday,
+  upcomingSaturday,
+  shabbatCardTimes,
+  TZEIT_AFTER_SUNSET_MIN,
+} from '../src/components/display/displayData.js';
 
 // Every instant below is written with an explicit Israel offset — +03:00 in summer, +02:00 in
 // winter — so the assertions describe Israel's wall clock no matter what TZ the runner has.
@@ -57,4 +63,35 @@ test('shabbatFriday is the Friday of the Shabbat upcomingSaturday names', () => 
 // this must still answer with Friday the 21st.
 test('shabbatFriday reads Israel\'s calendar, not the device\'s', () => {
   assert.equal(ymd(shabbatFriday(at('2026-08-22T22:00:00+03:00'))), '2026-08-21');
+});
+
+// Israel, high summer: sunset around 19:40, so צאת lands at 19:58 and ר״ת at 20:52.
+const ANCHORS = {
+  fridaySunset: '2026-08-21T19:41:00+03:00',
+  saturdaySunset: '2026-08-22T19:40:00+03:00',
+  saturdayTzeit72: '2026-08-22T20:52:00+03:00',
+};
+
+test('the candle card gets Friday\'s sunset, not Saturday\'s', () => {
+  assert.equal(shabbatCardTimes(ANCHORS).fridaySunset, '19:41');
+});
+
+test('צאת הכוכבים is שקיעה plus the shul\'s own offset, not a Hebcal field', () => {
+  assert.equal(TZEIT_AFTER_SUNSET_MIN, 18);
+  assert.equal(shabbatCardTimes(ANCHORS).tzeit, '19:58');
+});
+
+test('צאת ר״ת is read straight off Saturday\'s zmanim', () => {
+  assert.equal(shabbatCardTimes(ANCHORS).tzeitRT, '20:52');
+});
+
+test('a missing anchor is null, never a stale or invented time', () => {
+  const partial = shabbatCardTimes({ saturdaySunset: ANCHORS.saturdaySunset });
+  assert.equal(partial.fridaySunset, null);
+  assert.equal(partial.tzeitRT, null);
+  assert.equal(partial.tzeit, '19:58');
+  const nothing = shabbatCardTimes();
+  assert.equal(nothing.fridaySunset, null);
+  assert.equal(nothing.tzeit, null);
+  assert.equal(nothing.tzeitRT, null);
 });

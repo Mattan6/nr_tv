@@ -11,7 +11,9 @@ import {
   netzPrayerDate,
   weeklyMinchaTime,
   upcomingSaturday,
+  shabbatFriday,
   shabbatAnchors,
+  shabbatCardTimes,
   resolveShabbatTimes,
   screenSegment,
   israelParts,
@@ -19,6 +21,7 @@ import {
   toClock,
 } from '../components/display/displayData';
 import useDisplayContent from './useDisplayContent';
+import { parashaHighlights } from '../components/display/parashaHighlights';
 
 const ROTATE_MS = 6500;
 // Jokes rotate on their own, slower clock: 6.5s is not long enough to read a joke and
@@ -39,7 +42,13 @@ const pad = (n) => String(n).padStart(2, '0');
 //
 // Layout state deliberately stays OUT: the wall's canvas scale and the phone's accordion
 // are properties of a viewport, not of the shul's day.
-export default function useDisplayModel() {
+//
+// `forceScreen` pins the schedule instead of reading it off the calendar. pages/ShabbatDisplay
+// passes 'shabbat', because it IS the שבת board — asking it to render חול prayers would be
+// incoherent, and without this the `?screen=shabbat` preview on a Tuesday would post weekday
+// times under שבת headings. It bypasses the TopBar override too, which is harmless: the only
+// caller that forces has no TopBar.
+export default function useDisplayModel(forceScreen) {
   // null = follow the calendar; { screen, segmentKey } = a toggle override, live only
   // while the calendar is still inside that same schedule segment. See below.
   const [override, setOverride] = useState(null);
@@ -111,8 +120,8 @@ export default function useDisplayModel() {
 
   // Live zmanim (Nitzan) + this week's parasha, candle lighting and havdalah.
   //
-  // allSettled, not all: the five requests feed five independent parts of the
-  // screen, and one failing must not blank or freeze the other four. Every branch
+  // allSettled, not all: the six requests feed six independent parts of the
+  // screen, and one failing must not blank or freeze the other five. Every branch
   // also *assigns* — a rejected leg is written back as null so its panel falls to
   // "--:--". Leaving the previous value in place would quietly post last week's
   // times through an outage, which is worse than showing nothing.
@@ -127,7 +136,7 @@ export default function useDisplayModel() {
       const instant = new Date();
       const today = israelToday(instant);
       const saturday = upcomingSaturday(instant);
-      const [z, zThu, zSat, zNetz, p] = await Promise.allSettled([
+      const [z, zThu, zSat, zNetz, zFri, p] = await Promise.allSettled([
         getZmanim(today),
         getZmanim(governingThursday(instant)),
         getZmanim(saturday),
@@ -136,11 +145,14 @@ export default function useDisplayModel() {
         // twice a day — the branch that would save it has to be right on both sides of
         // a boundary that moves once a day, which is more than the request is worth.
         getZmanim(netzPrayerDate(instant)),
+        // Friday's, for the שקיעה the שבת board prints under הדלקת נרות. Duplicates the first
+        // leg on Fridays, and is accepted for the same reason the line above is.
+        getZmanim(shabbatFriday(instant)),
         getParasha(SHABBAT_CONFIG.candleLightingMinBeforeSunset),
       ]);
       if (cancelled) return;
       const value = (r) => (r.status === 'fulfilled' ? r.value : null);
-      const failures = [z, zThu, zSat, zNetz, p].filter((r) => r.status === 'rejected');
+      const failures = [z, zThu, zSat, zNetz, zFri, p].filter((r) => r.status === 'rejected');
       if (failures.length) {
         console.error('Failed to load display data:', failures.map((r) => r.reason));
       }
@@ -152,6 +164,10 @@ export default function useDisplayModel() {
       setShabbatAnchorTimes({
         ...shabbatAnchors(value(p), saturday),
         saturdaySunset: value(zSat)?.times?.sunset,
+        // Two more fields off a response already in hand. resolveShabbatTimes destructures only
+        // the three keys it needs, so these pass through it unread.
+        saturdayTzeit72: value(zSat)?.times?.tzeit72min,
+        fridaySunset: value(zFri)?.times?.sunset,
       });
       const parashaItem = value(p)?.items?.find((it) => it.category === 'parashat');
       setParasha(parashaItem?.hebrew || '');
@@ -204,7 +220,7 @@ export default function useDisplayModel() {
   // the TV stayed on. A date-stamped segment key never recurs, so once `now` leaves
   // the segment the override was cast in, it is gone for good.
   const { screen: scheduled, key: segmentKey } = screenSegment(now);
-  const screen = override && override.segmentKey === segmentKey ? override.screen : scheduled;
+  const screen = forceScreen || (override && override.segmentKey === segmentKey ? override.screen : scheduled);
   const setScreen = (value) => setOverride({ screen: value, segmentKey });
 
   // nowIL is declared above the effects — see the note there on israelDayKey.
@@ -244,6 +260,19 @@ export default function useDisplayModel() {
     time: (zmanimTimes && toClock(zmanimTimes[r.field], r.offsetMin)) || '--:--',
   }));
 
+  // The three edge cards. `candles` comes from the resolved prayer row rather than from the
+  // anchors, so a הדלקת נרות the gabbai pinned in /adminGabbai shows on the card as well as in
+  // the list — one number, two places.
+  const shabbatCards = {
+    candles: shabbatTimes.shabCandles,
+    ...shabbatCardTimes(shabbatAnchorTimes),
+  };
+
+  // מן הפרשה. Always an entry — parashaHighlights falls back rather than returning null — so
+  // the card renders through a Hebcal outage and through a Shabbat that has no parasha at all.
+  const highlights = parashaHighlights(parasha);
+  const haftara = highlights.haftara;
+
   // Advance through each list with one shared counter; an empty list yields null so
   // its panel renders a quiet placeholder rather than crashing.
   const index = (list) => (list.length ? tick % list.length : -1);
@@ -253,6 +282,8 @@ export default function useDisplayModel() {
   const azk = pick(azkarot) || {};
   // Its own counter, so `pick` (which is on the 6.5s tick) can't be reused here.
   const joke = jokes.length ? jokes[jokeTick % jokes.length] : null;
+  // Rotates on the shared 6.5s counter, like ann/maz/azk — one clock for the whole board.
+  const pasuk = highlights.pesukim.length ? highlights.pesukim[tick % highlights.pesukim.length] : null;
 
   return {
     // Calendar and clock
@@ -270,6 +301,7 @@ export default function useDisplayModel() {
     prayersSub,
     next,
     zmanimRows,
+    shabbatCards,
     // Admin-edited content
     shiurim,
     ticker,
@@ -277,6 +309,8 @@ export default function useDisplayModel() {
     maz,
     azk,
     joke,
+    haftara,
+    pasuk,
     // Rotation. The counters double as React keys, so a panel re-mounts and replays
     // its fade on every rotation. annCount/annIndex drive the mobile dot strip, which
     // needs the position in the list that `ann` was picked from.

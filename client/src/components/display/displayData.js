@@ -450,6 +450,29 @@ function arvitTime(season, { havdalah, saturdaySunset }, config) {
     : toClock(havdalah, -minBefore);
 }
 
+// The two dated cards flanking מניין הבא on the שבת board, resolved to 'HH:MM'.
+//
+// Pure string arithmetic over anchors the hook already holds, kept out of the hook so it is
+// testable without a Hebcal round trip — the same reason resolveShabbatTimes lives here.
+//
+// צאת הכוכבים is computed the shul's way, שקיעה + TZEIT_AFTER_SUNSET_MIN, and deliberately NOT
+// read off one of Hebcal's tzeit fields. The same zman is already on screen a few centimetres
+// away in the זמנים grid, which computes it that way through ZMANIM_ROWS; a second source would
+// put two numbers twenty-two minutes apart on one board in July.
+//
+// Any missing anchor yields null, which every consumer renders as '--:--'. A card never shows
+// last week's number.
+export function shabbatCardTimes(
+  { fridaySunset, saturdaySunset, saturdayTzeit72 } = {},
+  config = SHABBAT_CONFIG
+) {
+  return {
+    fridaySunset: toClock(fridaySunset),
+    tzeit: toClock(saturdaySunset, config.tzeitAfterSunsetMin),
+    tzeitRT: toClock(saturdayTzeit72),
+  };
+}
+
 // מנחה = the governing Thursday's sunset minus 20 minutes, fixed for the week.
 export function weeklyMinchaTime(thursdaySunsetIso) {
   return toClock(thursdaySunsetIso, -20);
