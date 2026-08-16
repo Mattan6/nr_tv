@@ -303,6 +303,21 @@ export function upcomingSaturday(now) {
   return israelDateAtNoon(p, (6 - p.weekday + 7) % 7);
 }
 
+// The Friday of the current Shabbat — the day before `upcomingSaturday`, by the same
+// Israel-calendar arithmetic and for the same reason.
+//
+// The שבת board's candle card prints a שקיעה under הדלקת נרות, and the שקיעה that belongs to
+// הדלקת נרות is Friday's — on Saturday just as much as on Friday itself, because the card is
+// a statement about the Shabbat being kept and not a countdown to anything.
+//
+// Deliberately not derived as `candles + candleLightingMinBeforeSunset`. That identity holds
+// only while the row is automatic; the moment the gabbai pins הדלקת נרות to a fixed time in
+// /adminGabbai, a "sunset" derived from his number would move with it and stop being a sunset.
+export function shabbatFriday(now) {
+  const p = israelParts(now);
+  return israelDateAtNoon(p, ((6 - p.weekday + 7) % 7) - 1);
+}
+
 // The date whose הנץ the שחרית מניין א׳ row posts: today until 07:30 Israel time, tomorrow
 // from 07:30 on. The minyan davens before six, so a row that only turned over at midnight
 // spent the whole day posting a time that had already passed — and the מניין הבא countdown,
