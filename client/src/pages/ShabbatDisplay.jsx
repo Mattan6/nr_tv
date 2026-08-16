@@ -1,6 +1,7 @@
 import Masthead from '../components/shabbat/Masthead';
 import LightTicker from '../components/shabbat/LightTicker';
-import { C } from '../components/shabbat/shabbatStyle';
+import { CandleCard, NextPrayerCard, HavdalahCard } from '../components/shabbat/EdgeCards';
+import { C, SANS } from '../components/shabbat/shabbatStyle';
 import useDisplayModel from '../hooks/useDisplayModel';
 import useCanvasScale from '../hooks/useCanvasScale';
 
@@ -15,7 +16,7 @@ import useCanvasScale from '../hooks/useCanvasScale';
 // otherwise post weekday times under שבת headings on any day but Saturday.
 const ShabbatDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
   const scale = useCanvasScale(safeArea);
-  const { clock, hebDate, greg, ticker, haftara, parasha } = useDisplayModel('shabbat');
+  const { clock, hebDate, greg, ticker, haftara, parasha, shabbatCards, next } = useDisplayModel('shabbat');
 
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: C.pageFlat }}>
@@ -35,7 +36,7 @@ const ShabbatDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
           style={{
             position: 'absolute',
             inset: 0,
-            fontFamily: "'Assistant',sans-serif",
+            fontFamily: SANS,
             color: C.ink,
             background: C.page,
             display: 'flex',
@@ -64,8 +65,18 @@ const ShabbatDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
             <div style={{ height: '4px', background: C.navy }} />
           </div>
 
-          {/* Panels land here in Tasks 6-9. */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '18px', padding: '20px 46px 0', minHeight: 0 }} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '18px', padding: '20px 46px 0', minHeight: 0 }}>
+            {/* Under dir=rtl the first column is the rightmost: נרות right, מניין הבא centre,
+                מוצאי שבת left — the two ends of Shabbat flanking the thing happening next. */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1.1fr 1fr', gap: '20px', flex: 'none' }}>
+              <CandleCard candles={shabbatCards.candles} sunset={shabbatCards.fridaySunset} />
+              <NextPrayerCard next={next} />
+              <HavdalahCard tzeit={shabbatCards.tzeit} tzeitRT={shabbatCards.tzeitRT} />
+            </div>
+
+            {/* Panels land here in Tasks 7-9. */}
+            <div style={{ flex: 1, minHeight: 0 }} />
+          </div>
 
           <LightTicker items={ticker} />
         </div>
