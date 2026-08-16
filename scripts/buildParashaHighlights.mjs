@@ -35,6 +35,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function strip(html) {
   return String(html)
+    // Sefaria attaches textual notes (e.g. the ketiv/keri remark on Numbers 25:12's שָׁלוֹם) as
+    // <sup class="footnote-marker"> + <i class="footnote">…</i> immediately after the word they
+    // annotate, with no separating space. The generic tag strip below removes the tags but not
+    // their text, which would otherwise fuse the note's own Hebrew onto the preceding word and
+    // spill it into the token stream as extra "words". Drop both elements, tag and content,
+    // before the generic strip runs.
+    .replace(/<sup class="footnote-marker">.*?<\/sup>/g, '')
+    .replace(/<i class="footnote">.*?<\/i>/g, '')
     .replace(/<[^>]*>/g, '')
     .replace(/&thinsp;|&nbsp;/g, ' ')
     // {פ}/{ס} are Sefaria's open/closed-paragraph markers, and U+034F is a combining grapheme

@@ -27,11 +27,15 @@ test('a known parasha resolves to its own entry', () => {
 });
 
 test('a combined name normalizes to the key shape the table will use', () => {
-  // Genesis has no combined parashiyot, so this asserts the KEY, not a lookup — the lookup
-  // half is pinned in Task 3, where the seven pairs exist. The maqaf below is U+05BE, the
-  // same character the generator writes into the table's keys.
+  // The maqaf below is U+05BE, the same character the generator writes into the table's keys.
   assert.equal(parashaKey('פרשת ויקהל-פקודי'), `ויקהל${MAQAF}פקודי`);
-  assert.equal(parashaHighlights('פרשת ויקהל-פקודי'), FALLBACK);
+});
+
+test('a combined parasha resolves however Hebcal spelled the dash', () => {
+  const viaHyphen = parashaHighlights('פרשת ויקהל-פקודי');
+  const viaMaqaf = parashaHighlights(`פרשת ויקהל${MAQAF}פקודי`);
+  assert.equal(viaHyphen, viaMaqaf);
+  assert.notEqual(viaHyphen, FALLBACK);
 });
 
 test('no parasha, a blank one, and an unknown one all fall back', () => {
@@ -58,7 +62,7 @@ const NIKUD_PRESENT = /[\u05B0-\u05BC]/;
 
 test('every entry is renderable', () => {
   const keys = Object.keys(PARASHA_HIGHLIGHTS);
-  assert.ok(keys.length >= 12, `expected at least the twelve Genesis parashiyot, got ${keys.length}`);
+  assert.ok(keys.length === 61, `expected 54 parashiyot + 7 combined pairs, got ${keys.length}`);
   for (const key of keys) {
     const entry = PARASHA_HIGHLIGHTS[key];
     assert.ok(entry.pesukim.length >= 1, `${key}: no pesukim`);
@@ -82,5 +86,17 @@ test('every entry is renderable', () => {
       assert.ok(!FORBIDDEN.test(entry.haftara.name), `${key}: cantillation survived in haftara name "${entry.haftara.name}"`);
       assert.ok(NIKUD_PRESENT.test(entry.haftara.name), `${key}: no nikud in haftara name "${entry.haftara.name}"`);
     }
+  }
+});
+
+test('all seven combined pairs are keyed', () => {
+  for (const pair of ['ויקהל־פקודי', 'תזריע־מצורע', 'אחרי מות־קדושים', 'בהר־בחוקותי', 'חוקת־בלק', 'מטות־מסעי', 'נצבים־וילך']) {
+    assert.notEqual(parashaHighlights(`פרשת ${pair}`), FALLBACK, pair);
+  }
+});
+
+test('every parasha carries a haftara; only the fallback does not', () => {
+  for (const key of Object.keys(PARASHA_HIGHLIGHTS)) {
+    assert.ok(PARASHA_HIGHLIGHTS[key].haftara, `${key}: no haftara`);
   }
 });
