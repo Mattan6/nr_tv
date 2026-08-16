@@ -2,6 +2,8 @@ import Masthead from '../components/shabbat/Masthead';
 import LightTicker from '../components/shabbat/LightTicker';
 import { CandleCard, NextPrayerCard, HavdalahCard } from '../components/shabbat/EdgeCards';
 import PrayerListCard from '../components/shabbat/PrayerListCard';
+import ZmanimGrid from '../components/shabbat/ZmanimGrid';
+import ShiurimCard from '../components/shabbat/ShiurimCard';
 import { C, SANS } from '../components/shabbat/shabbatStyle';
 import useDisplayModel from '../hooks/useDisplayModel';
 import useCanvasScale from '../hooks/useCanvasScale';
@@ -17,7 +19,7 @@ import useCanvasScale from '../hooks/useCanvasScale';
 // otherwise post weekday times under שבת headings on any day but Saturday.
 const ShabbatDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
   const scale = useCanvasScale(safeArea);
-  const { clock, hebDate, greg, ticker, haftara, parasha, shabbatCards, next, prayers } = useDisplayModel('shabbat');
+  const { clock, hebDate, greg, ticker, haftara, parasha, shabbatCards, next, prayers, zmanimRows, shiurim } = useDisplayModel('shabbat');
 
   // The שבת list spans two days and each row is already tagged with the day it happens on —
   // `day` exists because computeNextMinyan needs it, and the two cards get it for free.
@@ -90,8 +92,10 @@ const ShabbatDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
                 <PrayerListCard title="יוֹם הַשַּׁבָּת" sub="שחרית · מנחה · ערבית" rows={yom} />
               </div>
 
-              {/* Middle column — Task 8. */}
-              <div style={{ minHeight: 0 }} />
+              <div style={{ display: 'grid', gridTemplateRows: '0.72fr 1.28fr', gap: '20px', minHeight: 0 }}>
+                <ZmanimGrid rows={zmanimRows} />
+                <ShiurimCard shiurim={shiurim} />
+              </div>
 
               {/* Left column — Task 9. */}
               <div style={{ minHeight: 0 }} />
