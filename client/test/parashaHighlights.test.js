@@ -26,11 +26,12 @@ test('a known parasha resolves to its own entry', () => {
   assert.equal(entry, PARASHA_HIGHLIGHTS['בראשית']);
 });
 
-test('a combined parasha resolves however Hebcal spelled the dash', () => {
-  const viaHyphen = parashaHighlights('פרשת ויקהל-פקודי');
-  const viaMaqaf = parashaHighlights(`פרשת ויקהל${MAQAF}פקודי`);
-  assert.equal(viaHyphen, viaMaqaf);
-  assert.notEqual(viaHyphen, FALLBACK);
+test('a combined name normalizes to the key shape the table will use', () => {
+  // Genesis has no combined parashiyot, so this asserts the KEY, not a lookup — the lookup
+  // half is pinned in Task 3, where the seven pairs exist. The maqaf below is U+05BE, the
+  // same character the generator writes into the table's keys.
+  assert.equal(parashaKey('פרשת ויקהל-פקודי'), `ויקהל${MAQAF}פקודי`);
+  assert.equal(parashaHighlights('פרשת ויקהל-פקודי'), FALLBACK);
 });
 
 test('no parasha, a blank one, and an unknown one all fall back', () => {
