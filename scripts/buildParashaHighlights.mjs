@@ -155,7 +155,8 @@ async function main() {
     const members = pair.map((name) => byName.get(name));
     // Task 2 curates Genesis only, so every pair is skipped on that run; Task 3 completes
     // CURATION and they all resolve. Skipping rather than throwing keeps one code path across
-    // both runs — Task 3 adds the test that asserts all seven are keyed; it does not exist yet.
+    // both runs — client/test/parashaHighlights.test.js's 'all seven combined pairs are keyed'
+    // is what makes a silently-skipped pair fail the build instead of shipping the fallback.
     if (members.some((m) => !m)) {
       process.stderr.write(`skipping ${pair.join('־')} — not all members curated yet\n`);
       continue;

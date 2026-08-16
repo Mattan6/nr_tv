@@ -77,10 +77,11 @@ export const CURATION = [
     { ref: 'Genesis 33:4', words: [1, 6] },
   ] },
   // Amos 2:6's haftara name was words [1, 3] — "כֹּה אָמַר יְהֹוָה", a generic prophetic
-  // formula that names no haftara at all. Shifted to [4, 11], which drops the formula and
-  // picks up "עַל־מִכְרָם בַּכֶּסֶף" (sold for silver) — the phrase that actually explains why
-  // this is וישב's haftara, echoing Joseph's sale for silver.
-  { parasha: 'וישב', haftara: { ref: 'Amos 2:6', words: [4, 11] }, pesukim: [
+  // formula that names no haftara at all. Shifted to [4, 12], which drops the formula and
+  // picks up "עַל־מִכְרָם בַּכֶּסֶף צַדִּיק" (sold the righteous for silver) — the phrase that
+  // actually explains why this is וישב's haftara, echoing Joseph's sale for silver. [4, 11]
+  // stopped one word short, at בַּכֶּסֶף, dropping צַדִּיק — the object מִכְרָם governs.
+  { parasha: 'וישב', haftara: { ref: 'Amos 2:6', words: [4, 12] }, pesukim: [
     { ref: 'Genesis 37:3', words: [8, 11] },
     { ref: 'Genesis 39:2', words: [1, 6] },
     // Genesis 39:2 and 39:21 both open וַיְהִי ה׳ אֶת־יוֹסֵף — with the old [1, 6] range for
@@ -142,9 +143,10 @@ export const CURATION = [
     { ref: 'Exodus 20:2', words: [1, 9] },
     { ref: 'Exodus 20:8', words: [1, 4] },
   ] },
-  // Jeremiah 34:8 names both יִרְמְיָהוּ and צִדְקִיָּהוּ, and only completes its thought —
-  // "to proclaim liberty to them" — at the verse's end, which is also the phrase that connects
-  // this haftara to משפטים's law of the freed Hebrew servant. Kept long to reach it.
+  // [6, 16] drops the verse's opening (and with it יִרְמְיָהוּ's name) to start at "אַחֲרֵי",
+  // naming צִדְקִיָּהוּ instead, and only completes its thought — "to proclaim liberty to them"
+  // — at the verse's end, which is also the phrase that connects this haftara to משפטים's law
+  // of the freed Hebrew servant. Kept long to reach it.
   { parasha: 'משפטים', haftara: { ref: 'Jeremiah 34:8', words: [6, 16] }, pesukim: [
     { ref: 'Exodus 23:20', words: [1, 6] },
     { ref: 'Exodus 23:25', words: [1, 7] },
@@ -186,11 +188,19 @@ export const CURATION = [
   { parasha: 'ויקרא', haftara: { ref: 'Isaiah 43:21', words: [1, 5] }, pesukim: [
     { ref: 'Leviticus 1:2', words: [6, 10] },
     { ref: 'Leviticus 1:9', words: [5, 12] },
-    { ref: 'Leviticus 2:13', words: [1, 7] },
+    // [1, 7] cut at מֶלַח, severing the fixed pair מֶלַח בְּרִית אֱלֹהֶיךָ ("the salt of the
+    // covenant of your God") — widened to keep it whole.
+    { ref: 'Leviticus 2:13', words: [1, 9] },
   ] },
   { parasha: 'צו', haftara: { ref: 'Jeremiah 7:21', words: [7, 11] }, pesukim: [
     { ref: 'Leviticus 6:6', words: [1, 6] },
-    { ref: 'Leviticus 7:12', words: [1, 3] },
+    // [1, 3] was the bare protasis "אִם עַל־תּוֹדָה יַקְרִיבֶנּוּ" (if he offers it for
+    // thanksgiving) with its apodosis cut off — an unfinished conditional, unlike Numbers 30:3
+    // and Leviticus 26:3's protases, which are long and structured enough to read as
+    // self-contained legal formulae on their own. Widened to [1, 10] to reach into the
+    // apodosis and its first complete object: "then he shall offer with the thanksgiving
+    // sacrifice unleavened cakes mixed with oil."
+    { ref: 'Leviticus 7:12', words: [1, 10] },
     { ref: 'Leviticus 8:35', words: [1, 8] },
   ] },
   // "בִּקְרֹבַי אֶקָּדֵשׁ" — through those near to Me I will be sanctified — is the verse's own
@@ -236,8 +246,8 @@ export const CURATION = [
     // The four species (ד׳ מינים) of Sukkot, Leviticus 23:40's own famous list.
     { ref: 'Leviticus 23:40', words: [5, 12] },
   ] },
-  // "וּקְרָאתֶם דְּרוֹר בָּאָר�ץ לְכׇל־יֹשְׁבֶיהָ" — the Liberty Bell's inscription.
   { parasha: 'בהר', haftara: { ref: 'Jeremiah 32:6', words: [1, 6] }, pesukim: [
+    // "וּקְרָאתֶם דְּרוֹר בָּאָרֶץ לְכׇל־יֹשְׁבֶיהָ" — the Liberty Bell's inscription.
     { ref: 'Leviticus 25:10', words: [6, 9] },
     { ref: 'Leviticus 25:17', words: [1, 6] },
     { ref: 'Leviticus 25:23', words: [1, 6] },
@@ -287,7 +297,10 @@ export const CURATION = [
     { ref: 'Numbers 21:17', words: [1, 8] },
   ] },
   { parasha: 'בלק', haftara: { ref: 'Micah 5:6', words: [1, 6] }, pesukim: [
-    { ref: 'Numbers 23:9', words: [5, 11] },
+    // [5, 11] started at אֲשׁוּרֶנּוּ, mid-hemistich, stranding its parallel half וּמִגְּבָעוֹת.
+    // Widened to [4, 11] to open on the whole parallel pair "מִגְּבָעוֹת אֲשׁוּרֶנּוּ" (and from
+    // the hills I behold him) — still eight tokens.
+    { ref: 'Numbers 23:9', words: [4, 11] },
     { ref: 'Numbers 23:21', words: [1, 6] },
     // "מַה־טֹּבוּ אֹהָלֶיךָ יַעֲקֹב" — recited on entering a synagogue.
     { ref: 'Numbers 24:5', words: [1, 5] },
