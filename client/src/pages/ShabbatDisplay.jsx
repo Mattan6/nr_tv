@@ -1,6 +1,7 @@
 import Masthead from '../components/shabbat/Masthead';
 import LightTicker from '../components/shabbat/LightTicker';
 import { CandleCard, NextPrayerCard, HavdalahCard } from '../components/shabbat/EdgeCards';
+import PrayerListCard from '../components/shabbat/PrayerListCard';
 import { C, SANS } from '../components/shabbat/shabbatStyle';
 import useDisplayModel from '../hooks/useDisplayModel';
 import useCanvasScale from '../hooks/useCanvasScale';
@@ -16,7 +17,16 @@ import useCanvasScale from '../hooks/useCanvasScale';
 // otherwise post weekday times under שבת headings on any day but Saturday.
 const ShabbatDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
   const scale = useCanvasScale(safeArea);
-  const { clock, hebDate, greg, ticker, haftara, parasha, shabbatCards, next } = useDisplayModel('shabbat');
+  const { clock, hebDate, greg, ticker, haftara, parasha, shabbatCards, next, prayers } = useDisplayModel('shabbat');
+
+  // The שבת list spans two days and each row is already tagged with the day it happens on —
+  // `day` exists because computeNextMinyan needs it, and the two cards get it for free.
+  //
+  // הדלקת נרות is filtered out of ערב שבת because it has its own card above. That leaves one
+  // row there, which is the layout the design calls for: a duplicated time and an over-full
+  // card are both worse than a card with room in it.
+  const erev = prayers.filter((p) => p.day === 5 && p.name !== 'הדלקת נרות');
+  const yom = prayers.filter((p) => p.day === 6);
 
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: C.pageFlat }}>
@@ -74,8 +84,18 @@ const ShabbatDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
               <HavdalahCard tzeit={shabbatCards.tzeit} tzeitRT={shabbatCards.tzeitRT} />
             </div>
 
-            {/* Panels land here in Tasks 7-9. */}
-            <div style={{ flex: 1, minHeight: 0 }} />
+            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1.1fr 1.1fr 1fr', gap: '20px', minHeight: 0, paddingBottom: '4px' }}>
+              <div style={{ display: 'grid', gridTemplateRows: '0.8fr 1.2fr', gap: '20px', minHeight: 0 }}>
+                <PrayerListCard title="עֶרֶב שַׁבָּת" sub="יום שישי · קבלת שבת" rows={erev} />
+                <PrayerListCard title="יוֹם הַשַּׁבָּת" sub="שחרית · מנחה · ערבית" rows={yom} />
+              </div>
+
+              {/* Middle column — Task 8. */}
+              <div style={{ minHeight: 0 }} />
+
+              {/* Left column — Task 9. */}
+              <div style={{ minHeight: 0 }} />
+            </div>
           </div>
 
           <LightTicker items={ticker} />
