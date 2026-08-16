@@ -1,4 +1,5 @@
 import SynagogueDisplay from './SynagogueDisplay';
+import ShabbatDisplay from './ShabbatDisplay';
 import KeepAwake from '../components/KeepAwake';
 import NightlyReload from '../components/NightlyReload';
 
@@ -23,20 +24,37 @@ const TV_SAFE_AREA = { x: 0.04, y: 0.03 };
 // the panel either way. What it does do is lay the page out at a width the WebView then
 // declines to zoom out to fit (useWideViewPort without loadWithOverviewMode), leaving a
 // quarter of the display hanging off the right and bottom edges.
-const TvDisplay = () => (
-  // Holds no layout of its own — only the attribute the TV-only focus rules in index.css
-  // hang off. SynagogueDisplay positions itself against the viewport exactly as on /.
-  <div data-tv>
-    {/* The box's screensaver takes the screen after a few minutes and its firmware offers no
-        "never", so the page has to hold the screen itself. Mounted only here: this is the
-        one import site, which is what keeps the wake lock off every other route. */}
-    <KeepAwake />
-    {/* Nothing else ever reloads this page, so a deploy would never reach the TV — and
-        KeepAwake removes the sleep/wake cycles that used to do it by accident. Same one
-        import site rule: a phone must never reload under the reader. */}
-    <NightlyReload />
-    <SynagogueDisplay safeArea={TV_SAFE_AREA} />
-  </div>
-);
+
+// A typed URL can pin the board: /tv?screen=shabbat, /tv?screen=weekday. Read once, at mount.
+//
+// Not the חול/שבת toggle coming back through a side door. Reaching it takes a keyboard, so a
+// remote cannot arrive here by accident, and a reload of the plain /tv address always restores
+// the schedule — the toggle's override, by contrast, outlived the segment it was cast in.
+// It is how this layout gets reviewed on a Tuesday.
+const previewScreen = () => {
+  const value = new URLSearchParams(window.location.search).get('screen');
+  return value === 'shabbat' || value === 'weekday' ? value : null;
+};
+
+const TvDisplay = () => {
+  const screen = previewScreen();
+  return (
+    <div data-tv>
+      {/* The box's screensaver takes the screen after a few minutes and its firmware offers no
+          "never", so the page has to hold the screen itself. Mounted only here: this is the
+          one import site, which is what keeps the wake lock off every other route. */}
+      <KeepAwake />
+      {/* Nothing else ever reloads this page, so a deploy would never reach the TV — and
+          KeepAwake removes the sleep/wake cycles that used to do it by accident. Same one
+          import site rule: a phone must never reload under the reader. */}
+      <NightlyReload />
+      {screen === 'shabbat' ? (
+        <ShabbatDisplay safeArea={TV_SAFE_AREA} />
+      ) : (
+        <SynagogueDisplay safeArea={TV_SAFE_AREA} />
+      )}
+    </div>
+  );
+};
 
 export default TvDisplay;

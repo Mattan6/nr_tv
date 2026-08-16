@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import TopBar from '../components/display/TopBar';
 import PrayerTimesPanel from '../components/display/PrayerTimesPanel';
 import ZmanimPanel from '../components/display/ZmanimPanel';
@@ -7,19 +6,17 @@ import AnnouncementsPanel from '../components/display/AnnouncementsPanel';
 import { NextMinyanPanel, JokesPanel, MazalPanel, AzkarotPanel } from '../components/display/CenterCards';
 import Ticker from '../components/display/Ticker';
 import useDisplayModel from '../hooks/useDisplayModel';
+import useCanvasScale from '../hooks/useCanvasScale';
 
 // The wall display: a fixed 1920x1080 canvas scaled to whatever screen it is on. Every
 // value it renders comes from useDisplayModel, which the phone layout also calls — see
-// pages/MobileDisplay.jsx. Only the canvas scale is computed here, because only this
-// layout has a canvas.
+// pages/MobileDisplay.jsx. The fit itself lives in hooks/useCanvasScale.js: pages/ShabbatDisplay.jsx
+// needs the identical arithmetic, and it belongs to neither page.
 //
 // safeArea holds back a fraction of each axis before fitting, for TVs that crop their own
-// edges — pages/TvDisplay.jsx passes it. Zero is a no-op, so / fits exactly as it always
-// has. It is a scale input rather than padding on a wrapper because the fit below measures
-// the window and not this component's box: an inset wrapper would keep the full-window
-// scale and crop the canvas instead of shrinking it.
+// edges — pages/TvDisplay.jsx passes it. Zero is a no-op, so / fits exactly as it always has.
 const SynagogueDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
-  const [scale, setScale] = useState(1);
+  const scale = useCanvasScale(safeArea);
   const {
     screen,
     setScreen,
@@ -42,23 +39,6 @@ const SynagogueDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
     tick,
     jokeTick,
   } = useDisplayModel();
-
-  // Scale the fixed 1920x1080 canvas to fit the screen, less the safe area. Depends on
-  // the two numbers rather than the object so a caller passing an inline literal does not
-  // re-subscribe on every render.
-  const { x: safeX, y: safeY } = safeArea;
-  useEffect(() => {
-    const fit = () =>
-      setScale(
-        Math.min(
-          (window.innerWidth * (1 - 2 * safeX)) / 1920,
-          (window.innerHeight * (1 - 2 * safeY)) / 1080
-        )
-      );
-    fit();
-    window.addEventListener('resize', fit);
-    return () => window.removeEventListener('resize', fit);
-  }, [safeX, safeY]);
 
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#070a10' }}>
