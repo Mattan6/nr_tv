@@ -7,7 +7,7 @@ const MAQAF = '־';
 
 test('strips the פרשת prefix', () => {
   assert.equal(parashaKey('פרשת בראשית'), 'בראשית');
-  assert.equal(parashaKey('פרשת לך לך'), 'לך לך');
+  assert.equal(parashaKey('פרשת לך לך'), `לך${MAQAF}לך`);
 });
 
 test('every dash in a combined name normalizes to a maqaf', () => {
@@ -36,6 +36,13 @@ test('a combined parasha resolves however Hebcal spelled the dash', () => {
   const viaMaqaf = parashaHighlights(`פרשת ויקהל${MAQAF}פקודי`);
   assert.equal(viaHyphen, viaMaqaf);
   assert.notEqual(viaHyphen, FALLBACK);
+});
+
+test('a multi-word parasha resolves however Hebcal joins its words', () => {
+  const viaSpace = parashaHighlights('פרשת כי תצא');
+  const viaMaqaf = parashaHighlights(`פרשת כי${MAQAF}תצא`);
+  assert.equal(viaSpace, viaMaqaf);
+  assert.notEqual(viaSpace, FALLBACK);
 });
 
 test('no parasha, a blank one, and an unknown one all fall back', () => {
@@ -98,5 +105,14 @@ test('all seven combined pairs are keyed', () => {
 test('every parasha carries a haftara; only the fallback does not', () => {
   for (const key of Object.keys(PARASHA_HIGHLIGHTS)) {
     assert.ok(PARASHA_HIGHLIGHTS[key].haftara, `${key}: no haftara`);
+  }
+});
+
+test('every table key is already canonical', () => {
+  // The generator canonicalizes keys independently of parashaKey — it cannot import the
+  // lookup, which imports the file it is writing. This is what stops the two copies drifting:
+  // a key the lookup would normalize differently is a key nothing can ever reach.
+  for (const key of Object.keys(PARASHA_HIGHLIGHTS)) {
+    assert.equal(parashaKey(`פרשת ${key}`), key);
   }
 });

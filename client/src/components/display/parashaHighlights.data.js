@@ -4,8 +4,11 @@
 // Selection lives in scripts/parashaCuration.mjs. Every vocalized string below was fetched
 // from Sefaria and stripped of cantillation by that script; none of it was typed.
 //
-// Keys are bare parasha names with a Hebrew maqaf (U+05BE) joining combined pairs. Callers go
-// through parashaHighlights.js, which normalizes what Hebcal sends before looking anything up.
+// Keys are parasha names with every space — between a combined pair's two members, and inside
+// a multi-word name like לך לך or כי תצא — folded to a Hebrew maqaf (U+05BE), matching what
+// parashaHighlights.js's parashaKey produces from a Hebcal name spelled with either a space or
+// a maqaf. Callers go through parashaHighlights.js, which normalizes what Hebcal sends before
+// looking anything up.
 
 export const PARASHA_HIGHLIGHTS = {
   "בראשית": {
@@ -24,7 +27,7 @@ export const PARASHA_HIGHLIGHTS = {
       { text: "וְקֹר וָחֹם וְקַיִץ וָחֹרֶף וְיוֹם וָלַיְלָה לֹא יִשְׁבֹּתוּ", ref: "בראשית ח׳, כ״ב" },
     ],
   },
-  "לך לך": {
+  "לך־לך": {
     haftara: { ref: "ישעיהו מ׳", name: "לָמָּה תֹאמַר יַעֲקֹב וּתְדַבֵּר יִשְׂרָאֵל" },
     pesukim: [
       { text: "לֶךְ־לְךָ מֵאַרְצְךָ וּמִמּוֹלַדְתְּךָ וּמִבֵּית אָבִיךָ אֶל־הָאָרֶץ אֲשֶׁר אַרְאֶךָּ", ref: "בראשית י״ב, א׳" },
@@ -40,7 +43,7 @@ export const PARASHA_HIGHLIGHTS = {
       { text: "אַל־תִּשְׁלַח יָדְךָ אֶל־הַנַּעַר וְאַל־תַּעַשׂ לוֹ מְאוּמָה", ref: "בראשית כ״ב, י״ב" },
     ],
   },
-  "חיי שרה": {
+  "חיי־שרה": {
     haftara: { ref: "מלכים א׳ א׳", name: "וְהַמֶּלֶךְ דָּוִד זָקֵן בָּא בַּיָּמִים" },
     pesukim: [
       { text: "וְאַבְרָהָם זָקֵן בָּא בַּיָּמִים וַיהֹוָה בֵּרַךְ אֶת־אַבְרָהָם בַּכֹּל", ref: "בראשית כ״ד, א׳" },
@@ -168,7 +171,7 @@ export const PARASHA_HIGHLIGHTS = {
       { text: "וְשָׁכַנְתִּי בְּתוֹךְ בְּנֵי יִשְׂרָאֵל וְהָיִיתִי לָהֶם לֵאלֹהִים", ref: "שמות כ״ט, מ״ה" },
     ],
   },
-  "כי תשא": {
+  "כי־תשא": {
     haftara: { ref: "מלכים א׳ י״ח", name: "וַיִּשְׁלַח אַחְאָב בְּכׇל־בְּנֵי יִשְׂרָאֵל וַיִּקְבֹּץ אֶת־הַנְּבִיאִים אֶל־הַר הַכַּרְמֶל" },
     pesukim: [
       { text: "וְשָׁמְרוּ בְנֵי־יִשְׂרָאֵל אֶת־הַשַּׁבָּת לַעֲשׂוֹת אֶת־הַשַּׁבָּת לְדֹרֹתָם בְּרִית עוֹלָם", ref: "שמות ל״א, ט״ז" },
@@ -232,7 +235,7 @@ export const PARASHA_HIGHLIGHTS = {
       { text: "וְהִזַּרְתֶּם אֶת־בְּנֵי־יִשְׂרָאֵל מִטֻּמְאָתָם וְלֹא יָמֻתוּ בְּטֻמְאָתָם בְּטַמְּאָם אֶת־מִשְׁכָּנִי", ref: "ויקרא ט״ו, ל״א" },
     ],
   },
-  "אחרי מות": {
+  "אחרי־מות": {
     haftara: { ref: "יחזקאל כ״ב", name: "הֲתִשְׁפֹּט הֲתִשְׁפֹּט אֶת־עִיר הַדָּמִים" },
     pesukim: [
       { text: "כִּי־בַיּוֹם הַזֶּה יְכַפֵּר עֲלֵיכֶם לְטַהֵר אֶתְכֶם מִכֹּל חַטֹּאתֵיכֶם", ref: "ויקרא ט״ז, ל׳" },
@@ -392,7 +395,7 @@ export const PARASHA_HIGHLIGHTS = {
       { text: "כִּי יְהֹוָה אֱלֹהֵיכֶם הַהֹלֵךְ עִמָּכֶם לְהִלָּחֵם לָכֶם עִם־אֹיְבֵיכֶם", ref: "דברים כ׳, ד׳" },
     ],
   },
-  "כי תצא": {
+  "כי־תצא": {
     haftara: { ref: "ישעיהו נ״ד", name: "רׇנִּי עֲקָרָה לֹא יָלָדָה" },
     pesukim: [
       { text: "שַׁלֵּחַ תְּשַׁלַּח אֶת־הָאֵם וְאֶת־הַבָּנִים תִּקַּח־לָךְ", ref: "דברים כ״ב, ז׳" },
@@ -400,7 +403,7 @@ export const PARASHA_HIGHLIGHTS = {
       { text: "בְּיוֹמוֹ תִתֵּן שְׂכָרוֹ וְלֹא־תָבוֹא עָלָיו הַשֶּׁמֶשׁ", ref: "דברים כ״ד, ט״ו" },
     ],
   },
-  "כי תבוא": {
+  "כי־תבוא": {
     haftara: { ref: "ישעיהו ס׳", name: "קוּמִי אוֹרִי כִּי בָא אוֹרֵךְ" },
     pesukim: [
       { text: "הַשְׁקִיפָה מִמְּעוֹן קׇדְשְׁךָ מִן־הַשָּׁמַיִם וּבָרֵךְ אֶת־עַמְּךָ אֶת־יִשְׂרָאֵל", ref: "דברים כ״ו, ט״ו" },
@@ -432,7 +435,7 @@ export const PARASHA_HIGHLIGHTS = {
       { text: "זְכֹר יְמוֹת עוֹלָם בִּינוּ שְׁנוֹת דֹּר־וָדֹר", ref: "דברים ל״ב, ז׳" },
     ],
   },
-  "וזאת הברכה": {
+  "וזאת־הברכה": {
     haftara: { ref: "יהושע א׳", name: "וַיְהִי אַחֲרֵי מוֹת מֹשֶׁה עֶבֶד יְהֹוָה וַיֹּאמֶר יְהֹוָה אֶל־יְהוֹשֻׁעַ" },
     pesukim: [
       { text: "תּוֹרָה צִוָּה־לָנוּ מֹשֶׁה מוֹרָשָׁה קְהִלַּת יַעֲקֹב", ref: "דברים ל״ג, ד׳" },
@@ -456,7 +459,7 @@ export const PARASHA_HIGHLIGHTS = {
       { text: "זֹאת תִּהְיֶה תּוֹרַת הַמְּצֹרָע בְּיוֹם טׇהֳרָתוֹ וְהוּבָא אֶל־הַכֹּהֵן", ref: "ויקרא י״ד, ב׳" },
     ],
   },
-  "אחרי מות־קדושים": {
+  "אחרי־מות־קדושים": {
     haftara: { ref: "יחזקאל כ׳", name: "בֶּן־אָדָם דַּבֵּר אֶת־זִקְנֵי יִשְׂרָאֵל" },
     pesukim: [
       { text: "כִּי־בַיּוֹם הַזֶּה יְכַפֵּר עֲלֵיכֶם לְטַהֵר אֶתְכֶם מִכֹּל חַטֹּאתֵיכֶם", ref: "ויקרא ט״ז, ל׳" },

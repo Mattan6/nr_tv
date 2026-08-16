@@ -128,6 +128,19 @@ async function haftaraOf(h) {
 
 const js = (v) => JSON.stringify(v);
 
+// Mirrors parashaHighlights.js's parashaKey fold from space-or-maqaf to maqaf-only — deliberately
+// a second copy, not an import: parashaHighlights.js imports parashaHighlights.data.js, the file
+// this script writes, so importing the lookup's canonicalizer back into the generator would be
+// circular at generation time. CURATION and COMBINED write multi-word names with plain spaces
+// (לך לך, and 'אחרי מות' as a combined-pair member); table keys must reach the exact string
+// parashaKey produces from a Hebcal name spelled with either a space or a maqaf, so every key is
+// put through this fold before it is written. 'every table key is already canonical' in
+// parashaHighlights.test.js is what pins the two copies together — a key this fold would not
+// leave unchanged is a key parashaKey would never produce, so nothing could ever look it up.
+function canonicalizeKey(name) {
+  return name.trim().replace(/\s+/g, '־');
+}
+
 async function main() {
   const showAt = process.argv.indexOf('--show');
   if (showAt !== -1) {
@@ -148,7 +161,7 @@ async function main() {
       pesukim: await Promise.all(item.pesukim.map(pasuk)),
     };
     byName.set(item.parasha, item);
-    entries.push([item.parasha, entry]);
+    entries.push([canonicalizeKey(item.parasha), entry]);
   }
 
   for (const { pair, haftara } of COMBINED) {
@@ -163,7 +176,11 @@ async function main() {
     }
     const [a, b] = members;
     process.stderr.write(`${pair.join('־')}\n`);
-    entries.push([pair.join('־'), {
+    // pair.join(' ') rather than pair.join('־'): canonicalizeKey folds every space to a maqaf
+    // regardless, but joining with a space first means a pair member that is itself two words
+    // (אחרי מות) goes through the exact same fold as the join between the two members, instead
+    // of a maqaf from .join and a leftover internal space meeting different rules.
+    entries.push([canonicalizeKey(pair.join(' ')), {
       haftara: await haftaraOf(haftara),
       pesukim: await Promise.all([a.pesukim[0], a.pesukim[1], b.pesukim[0]].map(pasuk)),
     }]);
@@ -187,8 +204,11 @@ async function main() {
 // Selection lives in scripts/parashaCuration.mjs. Every vocalized string below was fetched
 // from Sefaria and stripped of cantillation by that script; none of it was typed.
 //
-// Keys are bare parasha names with a Hebrew maqaf (U+05BE) joining combined pairs. Callers go
-// through parashaHighlights.js, which normalizes what Hebcal sends before looking anything up.
+// Keys are parasha names with every space — between a combined pair's two members, and inside
+// a multi-word name like לך לך or כי תצא — folded to a Hebrew maqaf (U+05BE), matching what
+// parashaHighlights.js's parashaKey produces from a Hebcal name spelled with either a space or
+// a maqaf. Callers go through parashaHighlights.js, which normalizes what Hebcal sends before
+// looking anything up.
 
 export const PARASHA_HIGHLIGHTS = {
 ${body}
