@@ -385,14 +385,38 @@ export const CURATION = [
 // pesukim are composed rather than re-curated — two from the first parasha, one from the
 // second — but the haftara is its own, because a combined reading does not simply inherit
 // either half's.
+//
+// Every haftara ref below is shared with a standalone parasha's own haftara elsewhere in
+// CURATION, and each range here is deliberately the same range already chosen for that
+// standalone entry, rather than an independent re-reading of the same verse.
 export const COMBINED = [
+  // Words [1, 3] here is "וַיַּעַשׂ חִירוֹם אֶת־הַכִּיֹּרוֹת" — אֶת־הַכִּיֹּרוֹת is one
+  // maqaf-joined token, so this is a complete clause ("And Hiram made the basins"), not a
+  // fragment severed at the object marker. Same range as standalone ויקהל's own haftara.
   { pair: ['ויקהל', 'פקודי'], haftara: { ref: 'I Kings 7:40', words: [1, 3] } },
-  { pair: ['תזריע', 'מצורע'], haftara: { ref: 'II Kings 7:3', words: [1, 3] } },
-  { pair: ['אחרי מות', 'קדושים'], haftara: { ref: 'Ezekiel 20:2', words: [1, 3] } },
-  { pair: ['בהר', 'בחוקותי'], haftara: { ref: 'Jeremiah 16:19', words: [1, 3] } },
-  { pair: ['חוקת', 'בלק'], haftara: { ref: 'Micah 5:6', words: [1, 3] } },
-  { pair: ['מטות', 'מסעי'], haftara: { ref: 'Jeremiah 2:4', words: [1, 3] } },
-  { pair: ['נצבים', 'וילך'], haftara: { ref: 'Isaiah 61:10', words: [1, 3] } },
+  // Widened from the placeholder [1, 3] — "וְאַרְבָּעָה אֲנָשִׁים הָיוּ" ends on "were" with
+  // no predicate. [1, 4] reaches מְצֹרָעִים, which both completes the sentence and names the
+  // affliction the parasha is about. Same range as standalone מצורע's own haftara.
+  { pair: ['תזריע', 'מצורע'], haftara: { ref: 'II Kings 7:3', words: [1, 4] } },
+  // Ezekiel 20:2 is entirely "וַיְהִי דְבַר־יְהֹוָה אֵלַי לֵאמֹר" (4 tokens, all of it) — the
+  // same bare messenger formula fixed for standalone קדושים, and for the same reason there is
+  // nothing later in the verse to shift toward. Moved to 20:3, same fix and same range as
+  // standalone קדושים's own haftara: "בֶּן־אָדָם דַּבֵּר אֶת־זִקְנֵי יִשְׂרָאֵל" at least
+  // names an addressee.
+  { pair: ['אחרי מות', 'קדושים'], haftara: { ref: 'Ezekiel 20:3', words: [1, 4] } },
+  // Widened from the placeholder [1, 3] to the fuller, still-complete declaration. Same range
+  // as standalone בחוקותי's own haftara.
+  { pair: ['בהר', 'בחוקותי'], haftara: { ref: 'Jeremiah 16:19', words: [1, 6] } },
+  // Widened from the placeholder [1, 3] — "וְהָיָה שְׁאֵרִית יַעֲקֹב" ends on "shall be" with
+  // no complement. [1, 6] completes it. Same range as standalone בלק's own haftara.
+  { pair: ['חוקת', 'בלק'], haftara: { ref: 'Micah 5:6', words: [1, 6] } },
+  // Widened from the placeholder [1, 3] — "שִׁמְעוּ דְבַר־יְהֹוָה בֵּית" ends on the construct
+  // "house of" with no completion. [1, 7] reaches "בֵּית יִשְׂרָאֵל" and closes the verse's own
+  // parallelism. Same range as standalone מסעי's own haftara.
+  { pair: ['מטות', 'מסעי'], haftara: { ref: 'Jeremiah 2:4', words: [1, 7] } },
+  // Widened from the placeholder [1, 3] to the fuller, still-complete declaration. Same range
+  // as standalone נצבים's own haftara.
+  { pair: ['נצבים', 'וילך'], haftara: { ref: 'Isaiah 61:10', words: [1, 6] } },
 ];
 
 // Shown when Hebcal reports no parashat item — שבת חול המועד, שבת ראש השנה and the other
