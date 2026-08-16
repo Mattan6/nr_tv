@@ -48,6 +48,14 @@ test('the fallback carries verses and no haftara', () => {
 // Structural integrity of the generated table. It is machine-written, so this is not checking
 // for typos — it is checking that a future change to the generator cannot quietly emit an entry
 // the board would render as `undefined`.
+//
+// FORBIDDEN mirrors buildParashaHighlights.mjs's DROP set exactly (cantillation, meteg, rafe,
+// paseq, sof pasuk, and the puncta-extraordinaria/nun-hafukha family) — not just the
+// cantillation range — so this test enforces the same invariant the generator promises,
+// rather than a narrower approximation a future Masoretic marker could slip past unnoticed.
+const FORBIDDEN = /[\u0591-\u05AF\u05BD\u05BF\u05C0\u05C3-\u05C6]/;
+const NIKUD_PRESENT = /[\u05B0-\u05BC]/;
+
 test('every entry is renderable', () => {
   const keys = Object.keys(PARASHA_HIGHLIGHTS);
   assert.ok(keys.length >= 12, `expected at least the twelve Genesis parashiyot, got ${keys.length}`);
@@ -56,15 +64,23 @@ test('every entry is renderable', () => {
     assert.ok(entry.pesukim.length >= 1, `${key}: no pesukim`);
     for (const p of entry.pesukim) {
       assert.equal(typeof p.text, 'string');
+      assert.equal(typeof p.ref, 'string');
       assert.ok(p.text.length > 0, `${key}: empty text`);
       assert.ok(p.ref.length > 0, `${key}: empty ref`);
-      // Cantillation must be gone; nikud must not be.
-      assert.ok(!/[\u0591-\u05AF]/.test(p.text), `${key}: cantillation survived in "${p.text}"`);
-      assert.ok(/[\u05B0-\u05BC]/.test(p.text), `${key}: no nikud in "${p.text}"`);
+      // Cantillation and the rarer Masoretic markers must be gone; nikud must not be.
+      assert.ok(!FORBIDDEN.test(p.text), `${key}: cantillation survived in "${p.text}"`);
+      assert.ok(NIKUD_PRESENT.test(p.text), `${key}: no nikud in "${p.text}"`);
     }
     if (entry.haftara) {
+      assert.equal(typeof entry.haftara.ref, 'string');
+      assert.equal(typeof entry.haftara.name, 'string');
       assert.ok(entry.haftara.ref.length > 0, `${key}: empty haftara ref`);
       assert.ok(entry.haftara.name.length > 0, `${key}: empty haftara name`);
+      // Haftara names come off the identical slice(await verse(...)) path and render on the
+      // same masthead as the pesukim — nothing mechanically stops one arriving unpointed, so
+      // this needs the same two assertions, not just a length check.
+      assert.ok(!FORBIDDEN.test(entry.haftara.name), `${key}: cantillation survived in haftara name "${entry.haftara.name}"`);
+      assert.ok(NIKUD_PRESENT.test(entry.haftara.name), `${key}: no nikud in haftara name "${entry.haftara.name}"`);
     }
   }
 });

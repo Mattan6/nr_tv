@@ -18,14 +18,17 @@ const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'client', 'src',
 const SEFARIA = 'https://www.sefaria.org/api/texts';
 const DELAY_MS = 120;
 
-// Cantillation (U+0591–U+05AF), meteg (U+05BD) — which the Masoretic edition adds as a reading
-// aid — paseq (U+05C0) and sof pasuk (U+05C3). Nikud (U+05B0–U+05BC, U+05C1, U+05C2, U+05C7)
-// is kept: it is the entire reason this script exists.
+// Cantillation (U+0591–U+05AF), meteg (U+05BD), rafe (U+05BF), paseq (U+05C0), sof pasuk
+// (U+05C3), and the puncta-extraordinaria/nun-hafukha family (U+05C4–U+05C6: upper dot, lower
+// dot, נון הפוכה) — the bracketing marks around Numbers 10:35–36, which Task 3 will curate.
+// Nikud (U+05B0–U+05BC, U+05C1, U+05C2, U+05C7) is kept: it is the entire reason this script
+// exists. U+05BE maqaf is deliberately outside both sets — see the word-counting rule in
+// parashaCuration.mjs.
 //
 // Written with \uXXXX escapes rather than literal combining marks in the character
 // classes: a literal combining mark pasted into a class does not survive copy/paste
 // reliably and fails silently by matching nothing.
-const DROP = /[\u0591-\u05AF\u05BD\u05C0\u05C3]/g;
+const DROP = /[\u0591-\u05AF\u05BD\u05BF\u05C0\u05C3-\u05C6]/g;
 const NIKUD = /[\u05B0-\u05BC\u05C1\u05C2\u05C7]/;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -34,6 +37,11 @@ function strip(html) {
   return String(html)
     .replace(/<[^>]*>/g, '')
     .replace(/&thinsp;|&nbsp;/g, ' ')
+    // {פ}/{ס} are Sefaria's open/closed-paragraph markers, and U+034F is a combining grapheme
+    // joiner it occasionally emits around maqaf-joined pairs — neither is Masoretic pointing,
+    // and leaving either in would land literal braces or an invisible joiner on the wall.
+    .replace(/\{[פס]\}/g, '')
+    .replace(/\u034F/g, '')
     .replace(DROP, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -139,7 +147,7 @@ async function main() {
     const members = pair.map((name) => byName.get(name));
     // Task 2 curates Genesis only, so every pair is skipped on that run; Task 3 completes
     // CURATION and they all resolve. Skipping rather than throwing keeps one code path across
-    // both runs — a missing pair is caught by the test that asserts all seven are keyed.
+    // both runs — Task 3 adds the test that asserts all seven are keyed; it does not exist yet.
     if (members.some((m) => !m)) {
       process.stderr.write(`skipping ${pair.join('־')} — not all members curated yet\n`);
       continue;

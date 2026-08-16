@@ -1,8 +1,10 @@
 // The editorial layer of מן הפרשה: which verse, and which words of it.
 //
-// Deliberately contains no Hebrew scripture. Every vocalized string in the generated table is
-// fetched from Sefaria by buildParashaHighlights.mjs, because vocalized Hebrew typed from
-// memory will contain errors and this text goes on a synagogue wall.
+// Deliberately contains no Hebrew scripture in any data field. Every vocalized string in the
+// generated table is fetched from Sefaria by buildParashaHighlights.mjs, because vocalized
+// Hebrew typed from memory will contain errors and this text goes on a synagogue wall. (A few
+// range-choice comments below quote a fragment to explain a decision — that's editorial
+// annotation, not a data field, and every quoted word is checkable against the generated file.)
 //
 // `words` is a 1-based inclusive range over the verse's tokens after cantillation is stripped.
 // Ranges must be contiguous — a fragment that needs to skip a word in the middle cannot be
