@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parashaKey, parashaHighlights } from '../src/components/display/parashaHighlights.js';
 import { PARASHA_HIGHLIGHTS, FALLBACK } from '../src/components/display/parashaHighlights.data.js';
-import { HEBCAL_PARASHIYOT } from './fixtures/hebcal-parashiyot.js';
+import { HEBCAL_PARASHIYOT, NOT_EMITTED_BY_HEBCAL } from './fixtures/hebcal-parashiyot.js';
 
 const MAQAF = '־';
 
@@ -139,5 +139,34 @@ test('every parasha name Hebcal has actually sent resolves to a real entry', () 
     for (const name of names) {
       assert.notEqual(parashaHighlights(name), FALLBACK, `${year}: "${name}" fell back`);
     }
+  }
+});
+
+// The other direction, and the one that closes the gap the first version of this fixture
+// left: the test above proves every name Hebcal sends is understood, but on its own it
+// would stay green while a table key went permanently unreachable — which is what the
+// maqaf and plene/chaser bugs both were.
+//
+// So: every key must be reachable from a real Hebcal name, and the only permitted
+// exceptions are the two Hebcal cannot emit for Israel. They are asserted BY NAME rather
+// than by a count, so the boundary is stated rather than hidden inside a smaller number —
+// and so that adding a key without fixture coverage fails here instead of shipping.
+test('every table key is reachable from a real Hebcal name, bar the two it never emits', () => {
+  const reachable = new Set(
+    Object.values(HEBCAL_PARASHIYOT).flat().map(parashaKey)
+  );
+  const unreachable = Object.keys(PARASHA_HIGHLIGHTS).filter((k) => !reachable.has(k));
+  assert.deepEqual(
+    unreachable.sort(),
+    [...NOT_EMITTED_BY_HEBCAL].sort(),
+    'a table key is unreachable from any name Hebcal sends — see the fixture header'
+  );
+});
+
+// Guards the exception list itself. Both entries are real table keys, so neither can be a
+// typo quietly excusing a key that does not exist.
+test('the declared exceptions are themselves real table keys', () => {
+  for (const key of NOT_EMITTED_BY_HEBCAL) {
+    assert.ok(Object.hasOwn(PARASHA_HIGHLIGHTS, key), `"${key}" is not a table key`);
   }
 });
