@@ -6,7 +6,10 @@ import {
   upcomingSaturday,
   shabbatCardTimes,
   TZEIT_AFTER_SUNSET_MIN,
+  SHABBAT_PRAYERS,
+  resolvePrayers,
 } from '../src/components/display/displayData.js';
+import { EMPHASIS } from '../src/components/shabbat/prayerEmphasis.js';
 
 // Every instant below is written with an explicit Israel offset — +03:00 in summer, +02:00 in
 // winter — so the assertions describe Israel's wall clock no matter what TZ the runner has.
@@ -94,4 +97,26 @@ test('a missing anchor is null, never a stale or invented time', () => {
   assert.equal(nothing.fridaySunset, null);
   assert.equal(nothing.tzeit, null);
   assert.equal(nothing.tzeitRT, null);
+});
+
+// I2: ShabbatDisplay.jsx filters SHABBAT_PRAYERS on the hand-copied literal 'הדלקת נרות', and
+// PrayerListCard.jsx's EMPHASIS regex hand-copies three more of its names (including the
+// U+05F4 gershayim in 'מוצ״ש'). Neither literal is derived from SHABBAT_PRAYERS, so a rename
+// there would silently break one or both without either side failing to compile. This pins
+// today's split — one row in ערב שבת once הדלקת נרות is pulled out, three in יום השבת — so a
+// future rename of any of these five names is caught here instead of on the wall.
+test('the שבת board\'s prayer split matches SHABBAT_PRAYERS', () => {
+  const rows = resolvePrayers(SHABBAT_PRAYERS, null, {});
+  assert.equal(rows.filter((p) => p.day === 5 && p.name !== 'הדלקת נרות').length, 1);
+  assert.equal(rows.filter((p) => p.day === 6).length, 3);
+});
+
+// The companion check: EMPHASIS itself still recognizes the two rows that actually reach
+// PrayerListCard bolded — קבלת שבת (inside 'מנחה וקבלת שבת') and ערבית מוצ״ש — and still leaves
+// the two plain rows, שחרית and bare מנחה, unbolded.
+test('EMPHASIS bolds the שבת-acceptance and שבת-release rows, and nothing else', () => {
+  assert.ok(EMPHASIS.test('מנחה וקבלת שבת'));
+  assert.ok(EMPHASIS.test('ערבית מוצ״ש'));
+  assert.ok(!EMPHASIS.test('שחרית'));
+  assert.ok(!EMPHASIS.test('מנחה'));
 });

@@ -216,7 +216,12 @@ export const CURATION = [
     { ref: 'Leviticus 12:3', words: [1, 5] },
     { ref: 'Leviticus 13:59', words: [1, 7] },
   ] },
-  { parasha: 'מצורע', haftara: { ref: 'II Kings 7:3', words: [1, 4] }, pesukim: [
+  // Keyed 'מצרע' (ktiv chaser), not the plene 'מצורע': Hebcal's own /hebcal response spells it
+  // this way in every year captured for client/test/fixtures/hebcal-parashiyot.json, both
+  // standalone and as the second half of 'תזריע־מצרע'. The table previously used the plene
+  // spelling, which no Hebcal response ever sends, so this parasha silently fell to the
+  // fallback verses every single week it came up — found by I1's fixture test.
+  { parasha: 'מצרע', haftara: { ref: 'II Kings 7:3', words: [1, 4] }, pesukim: [
     // Opens naming הַמְּצֹרָע — the word the parasha is named for.
     { ref: 'Leviticus 14:2', words: [1, 8] },
     { ref: 'Leviticus 14:11', words: [1, 6] },
@@ -234,7 +239,9 @@ export const CURATION = [
   // Same fix as אחרי מות above: Ezekiel 20:2 is the bare formula, so this moves to 20:3, whose
   // "בֶּן־אָדָם דַּבֵּר אֶת־זִקְנֵי יִשְׂרָאֵל" (son of man, speak to the elders of Israel) at
   // least names an addressee.
-  { parasha: 'קדושים', haftara: { ref: 'Ezekiel 20:3', words: [1, 4] }, pesukim: [
+  // Keyed 'קדשים' (ktiv chaser), not the plene 'קדושים', for the same reason as מצרע above —
+  // Hebcal never sends the plene spelling, standalone or in 'אחרי מות־קדשים'.
+  { parasha: 'קדשים', haftara: { ref: 'Ezekiel 20:3', words: [1, 4] }, pesukim: [
     // Contains קְדֹשִׁים תִּהְיוּ — the words the parasha is named for.
     { ref: 'Leviticus 19:2', words: [6, 12] },
     { ref: 'Leviticus 19:18', words: [5, 9] },
@@ -252,7 +259,9 @@ export const CURATION = [
     { ref: 'Leviticus 25:17', words: [1, 6] },
     { ref: 'Leviticus 25:23', words: [1, 6] },
   ] },
-  { parasha: 'בחוקותי', haftara: { ref: 'Jeremiah 16:19', words: [1, 6] }, pesukim: [
+  // Keyed 'בחקתי' (ktiv chaser), not the plene 'בחוקותי', for the same reason as מצרע above —
+  // Hebcal never sends the plene spelling, standalone or in 'בהר־בחקתי'.
+  { parasha: 'בחקתי', haftara: { ref: 'Jeremiah 16:19', words: [1, 6] }, pesukim: [
     // Contains בְּחֻקֹּתַי — the word the parasha is named for.
     { ref: 'Leviticus 26:3', words: [1, 6] },
     { ref: 'Leviticus 26:6', words: [1, 6] },
@@ -271,7 +280,9 @@ export const CURATION = [
     { ref: 'Numbers 6:25', words: [1, 5] },
     { ref: 'Numbers 6:26', words: [1, 7] },
   ] },
-  { parasha: 'בהעלותך', haftara: { ref: 'Zechariah 2:14', words: [1, 8] }, pesukim: [
+  // Keyed 'בהעלתך' (ktiv chaser), not the plene 'בהעלותך' — Hebcal's own response always spells
+  // it without the second ו. Found the same way as מצרע above.
+  { parasha: 'בהעלתך', haftara: { ref: 'Zechariah 2:14', words: [1, 8] }, pesukim: [
     // Contains בְּהַעֲלֹתְךָ — the word the parasha is named for.
     { ref: 'Numbers 8:2', words: [5, 12] },
     // Bracketed by נון הפוכה in the Masoretic text (Task 2 widened the DROP set precisely so
@@ -280,12 +291,19 @@ export const CURATION = [
     { ref: 'Numbers 10:35', words: [1, 12] },
     { ref: 'Numbers 12:3', words: [1, 9] },
   ] },
-  { parasha: 'שלח', haftara: { ref: 'Joshua 2:1', words: [1, 10] }, pesukim: [
+  // Keyed 'שלח לך', not the bare 'שלח' — Hebcal's own response always carries both words
+  // ('פרשת שלח־לך'). The bare form is a common short name but not one Hebcal ever sends, so
+  // this parasha silently fell to the fallback verses every time it came up. Found by I1's
+  // fixture test, the same as the other spelling fixes in this file.
+  { parasha: 'שלח לך', haftara: { ref: 'Joshua 2:1', words: [1, 10] }, pesukim: [
     { ref: 'Numbers 13:30', words: [6, 12] },
     { ref: 'Numbers 14:20', words: [1, 4] },
     { ref: 'Numbers 15:39', words: [1, 8] },
   ] },
-  { parasha: 'קרח', haftara: { ref: 'I Samuel 11:14', words: [1, 6] }, pesukim: [
+  // Keyed 'קורח' (plene), not the ktiv chaser 'קרח' — the one spelling fix in this file that
+  // runs the other direction: Hebcal's own response always carries the ו. Found the same way
+  // as the entries above.
+  { parasha: 'קורח', haftara: { ref: 'I Samuel 11:14', words: [1, 6] }, pesukim: [
     { ref: 'Numbers 16:22', words: [1, 7] },
     { ref: 'Numbers 17:5', words: [1, 8] },
     { ref: 'Numbers 18:20', words: [11, 16] },
@@ -409,17 +427,17 @@ export const COMBINED = [
   { pair: ['ויקהל', 'פקודי'], haftara: { ref: 'I Kings 7:40', words: [1, 3] } },
   // Widened from the placeholder [1, 3] — "וְאַרְבָּעָה אֲנָשִׁים הָיוּ" ends on "were" with
   // no predicate. [1, 4] reaches מְצֹרָעִים, which both completes the sentence and names the
-  // affliction the parasha is about. Same range as standalone מצורע's own haftara.
-  { pair: ['תזריע', 'מצורע'], haftara: { ref: 'II Kings 7:3', words: [1, 4] } },
+  // affliction the parasha is about. Same range as standalone מצרע's own haftara.
+  { pair: ['תזריע', 'מצרע'], haftara: { ref: 'II Kings 7:3', words: [1, 4] } },
   // Ezekiel 20:2 is entirely "וַיְהִי דְבַר־יְהֹוָה אֵלַי לֵאמֹר" (4 tokens, all of it) — the
-  // same bare messenger formula fixed for standalone קדושים, and for the same reason there is
+  // same bare messenger formula fixed for standalone קדשים, and for the same reason there is
   // nothing later in the verse to shift toward. Moved to 20:3, same fix and same range as
-  // standalone קדושים's own haftara: "בֶּן־אָדָם דַּבֵּר אֶת־זִקְנֵי יִשְׂרָאֵל" at least
+  // standalone קדשים's own haftara: "בֶּן־אָדָם דַּבֵּר אֶת־זִקְנֵי יִשְׂרָאֵל" at least
   // names an addressee.
-  { pair: ['אחרי מות', 'קדושים'], haftara: { ref: 'Ezekiel 20:3', words: [1, 4] } },
+  { pair: ['אחרי מות', 'קדשים'], haftara: { ref: 'Ezekiel 20:3', words: [1, 4] } },
   // Widened from the placeholder [1, 3] to the fuller, still-complete declaration. Same range
-  // as standalone בחוקותי's own haftara.
-  { pair: ['בהר', 'בחוקותי'], haftara: { ref: 'Jeremiah 16:19', words: [1, 6] } },
+  // as standalone בחקתי's own haftara.
+  { pair: ['בהר', 'בחקתי'], haftara: { ref: 'Jeremiah 16:19', words: [1, 6] } },
   // Widened from the placeholder [1, 3] — "וְהָיָה שְׁאֵרִית יַעֲקֹב" ends on "shall be" with
   // no complement. [1, 6] completes it. Same range as standalone בלק's own haftara.
   { pair: ['חוקת', 'בלק'], haftara: { ref: 'Micah 5:6', words: [1, 6] } },

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test": "node --test test/*.test.js",
+    "test": "node --test test/parashaHighlights.test.js test/screenSegment.test.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

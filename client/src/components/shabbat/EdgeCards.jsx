@@ -34,7 +34,7 @@ const Sub = ({ children }) => (
 export const CandleCard = ({ candles, sunset }) => (
   <EdgeShell icon={<TwinCandles />} title="הַדְלָקַת נֵרוֹת">
     <Big>{clock(candles)}</Big>
-    <Sub>שקיעת החמה {clock(sunset)}</Sub>
+    <Sub>שקיעת החמה (שישי) {clock(sunset)}</Sub>
   </EdgeShell>
 );
 

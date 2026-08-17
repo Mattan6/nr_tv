@@ -128,7 +128,7 @@ export default function useDisplayModel(forceScreen) {
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      // All four dates come off Israel's calendar, not the device's: east of Israel
+      // All five dates come off Israel's calendar, not the device's: east of Israel
       // `new Date()` has already rolled over for part of every evening, so "today's
       // zmanim" would be tomorrow's and `upcomingSaturday` would skip to next week's
       // Shabbat while the hall was still sitting in this one. Each helper takes the

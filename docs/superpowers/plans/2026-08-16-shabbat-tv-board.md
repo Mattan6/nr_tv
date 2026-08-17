@@ -65,7 +65,11 @@
 | `client/package.json` | `"test": "node --test test/"`. |
 | `package.json` | Root `test` runs server then client. |
 
-`SynagogueDisplay.jsx`, `MobileDisplay.jsx`, every existing panel under `components/display/`, and every file under `server/` are untouched.
+`MobileDisplay.jsx`, every existing panel under `components/display/`, and every file under
+`server/` are untouched. `SynagogueDisplay.jsx` is not: Task 10 Step 3 gives it a `showToggle`
+prop, so `/tv`'s dark board can drop its toggle without taking it away from `/`. One prop on the
+component's own signature and one prop passed down to `TopBar` — see that step for the exact
+change.
 
 ## Scratch directory
 
@@ -1785,6 +1789,8 @@ Open `http://localhost:5173/tv?screen=shabbat`. Expected: the rightmost column n
 - [ ] **Step 4: Cross-check against the dark board**
 
 Open `http://localhost:5173/tv?screen=weekday` and press the שבת chip in its top bar. The five rows it lists must be the same five times: הדלקת נרות on the candle card, מנחה וקבלת שבת in ערב שבת, and the three in יום השבת. A mismatch means the two boards are resolving different schedules, which is the failure `forceScreen` exists to prevent.
+
+(Task 10 later removes the חול/שבת chips from `/tv` itself, so once this whole plan is complete this exact click is no longer available there. The equivalent cross-check at that point is done from `/` on a desktop, which keeps both chips — see Task 10 Step 6.)
 
 - [ ] **Step 5: Confirm a pinned time reaches both places it shows**
 

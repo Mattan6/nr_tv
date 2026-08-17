@@ -22,6 +22,9 @@ import useCanvasScale from '../hooks/useCanvasScale';
 // otherwise post weekday times under שבת headings on any day but Saturday.
 const ShabbatDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
   const scale = useCanvasScale(safeArea);
+  // Takes maz, pasuk and ann off the model, and pointedly not azk or joke: לעילוי נשמת and
+  // בדיחות ליאור are absent from this board by design, not omission — both keep appearing on
+  // the weekday board only.
   const { clock, hebDate, greg, ticker, haftara, parasha, shabbatCards, next, prayers, zmanimRows, shiurim, maz, pasuk, ann, tick } =
     useDisplayModel('shabbat');
 

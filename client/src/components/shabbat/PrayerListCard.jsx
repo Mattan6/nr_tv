@@ -1,5 +1,6 @@
 import { C, CARD, SERIF } from './shabbatStyle';
 import { Rosette } from './icons';
+import { EMPHASIS } from './prayerEmphasis';
 
 // One component, mounted twice: ערב שבת and יום השבת. The two lists differ only in their rows
 // and their headings, and a second component would be the same forty lines with two strings
@@ -9,7 +10,13 @@ import { Rosette } from './icons';
 // it is released. They are picked out by name rather than by a flag on the data, because the
 // data is SHABBAT_PRAYERS and adding a presentation flag there would push a styling decision
 // into the schedule.
-const EMPHASIS = /הדלקת נרות|קבלת שבת|ערבית מוצ״ש/;
+//
+// EMPHASIS's own `הדלקת נרות` alternative can never match here: ShabbatDisplay filters that row
+// out of `rows` before either card mounts (it has its own card above). Kept anyway because this
+// component is generic — it renders whatever `rows` it is handed and does not know its one
+// caller pre-filters — so a future caller that doesn't would need it. EMPHASIS itself lives in
+// ./prayerEmphasis.js rather than here, so client/test/screenSegment.test.js can import the
+// exact regex instead of a copy retyped into the test.
 
 const PrayerListCard = ({ title, sub, rows }) => (
   <div style={{ ...CARD, padding: '14px 24px' }}>

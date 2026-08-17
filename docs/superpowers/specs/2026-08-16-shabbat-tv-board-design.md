@@ -167,9 +167,9 @@ budget ran out.
 So the selection is curated, once, and committed:
 
 ```js
-// client/src/components/display/parashaHighlights.js
+// client/src/components/display/parashaHighlights.data.js
 export const PARASHA_HIGHLIGHTS = {
-  'כי תבוא': {
+  'כי־תבוא': {
     haftara: { ref: 'ישעיהו ס׳', name: 'קוּמִי אוֹרִי' },
     pesukim: [
       { text: 'וּבָאוּ עָלֶיךָ כָּל הַבְּרָכוֹת הָאֵלֶּה', ref: 'דברים כ״ח, ב׳' },
@@ -226,15 +226,28 @@ are contiguous. That is a constraint on the selection, not a defect in the outpu
 
 ### Looking up this week
 
-Hebcal returns `'פרשת כי תבוא'`. The lookup strips the `פרשת ` prefix, trims, and normalizes the
-separator in double parashiyot — Hebrew maqaf (U+05BE), hyphen-minus and en-dash all reduce to
-one form before the table is consulted.
+Hebcal returns `'פרשת כי תבוא'`. The lookup strips the `פרשת ` prefix, trims, folds every dash a
+combined pair might arrive with — Hebrew maqaf (U+05BE), hyphen-minus, and the other Unicode
+dashes a copy-paste can introduce — to one form, and *then* folds every remaining run of
+internal whitespace to that same maqaf, before the table is consulted.
 
-Three cases have to resolve to something:
+That last fold is not there for combined pairs — the dash fold already handles those. It exists
+because a **multi-word parasha name** carries the identical spelling ambiguity one level up:
+`לך לך`, `כי תצא`, `אחרי מות`, and the first half of several combined pairs are each two words
+in their own right, and Hebcal has sent the space between those two words as an actual space in
+some responses and as a maqaf in others — the same way it varies the dash between two combined
+parashiyot. This was a real bug, not a hypothetical one: an earlier version of the lookup folded
+only the dash, so `'פרשת כי תצא'` and `'פרשת כי־תצא'` reached two different keys and one of the
+two spellings silently fell to the fallback verses. Folding whitespace the same way dashes are
+folded closed it, because both the curation's own multi-word keys and Hebcal's own occasional
+maqaf-for-space spellings normalize to the identical string.
+
+Four cases have to resolve to something:
 
 | Case | Result |
 |---|---|
 | `'פרשת נח'` | its own entry |
+| `'פרשת כי תצא'` and `'פרשת כי־תצא'` | the same entry — a multi-word name resolves however Hebcal joins its words |
 | `'פרשת ויקהל־פקודי'` | its own entry — combined parashiyot are keyed and curated in their own right, not merged at runtime |
 | no `parashat` item at all — שבת חול המועד, שבת ראש השנה, and the other Shabbatot whose reading is the festival's | the fallback entry |
 
@@ -275,6 +288,7 @@ the one part of this design whose correctness no test can establish.
 | File | What |
 |---|---|
 | `client/src/hooks/useScheduledScreen.js` | the schedule, sampled |
+| `client/src/hooks/useCanvasScale.js` | the scale-to-fit arithmetic for the 1920x1080 canvas, extracted so both boards call the same one instead of each owning a copy |
 | `client/src/pages/ShabbatDisplay.jsx` | the light 1920x1080 canvas and its grid |
 | `client/src/components/shabbat/shabbatStyle.js` | palette and the shared card styles |
 | `client/src/components/shabbat/icons.jsx` | candles, kiddush cup, sefer torah, the divider rosette |
@@ -303,6 +317,7 @@ thirty-line component with two modes.
 | File | Change |
 |---|---|
 | `client/src/pages/TvDisplay.jsx` | pick the board; read `?screen=`; pass `showToggle={false}` |
+| `client/src/pages/SynagogueDisplay.jsx` | take `showToggle`, pass it to `TopBar`; call the extracted `useCanvasScale` instead of computing the fit inline |
 | `client/src/components/display/TopBar.jsx` | `showToggle` prop, default `true` |
 | `client/src/components/display/displayData.js` | `shabbatFriday(now)` |
 | `client/src/hooks/useDisplayModel.js` | sixth zmanim leg; two more keys on `shabbatAnchorTimes`; expose `shabbatCards`, `haftara`, `pasuk` |
@@ -340,8 +355,13 @@ tested; that is what the visual pass below is for.
    candle card and the מנחה וקבלת שבת row under it.
 3. The three top cards on **Friday** and again on **Saturday** — הדלקת נרות and its sunset must
    not move between the two days; מוצאי שבת must not either.
-4. צאת הכוכבים on the havdalah card equals the צאת הכוכבים row in the זמנים grid. Same for
-   nothing else — this is the pair that has two plausible sources.
+4. צאת הכוכבים on the havdalah card equals the צאת הכוכבים row in the זמנים grid — the same
+   number, not merely two labels for the same idea. It is not the only pair on the board with
+   two plausible sources: שקיעת החמה is printed twice as well, Friday's on the candle card and
+   (from Saturday onward) today's in the זמנים grid, and those two are supposed to differ. That
+   pair does not get an equality check — it gets a label, `שקיעת החמה (שישי)`, so the two numbers
+   read as two different things rather than as a contradiction. צאת הכוכבים is the pair that
+   actually has to match.
 5. Cross Friday 09:00 with the page left open: the board swaps without a reload. Cross Saturday
    24:00 the same way. Both under `TZ` set to something other than Israel — **via PowerShell**,
    not Git Bash, which does not propagate `TZ` to `node.exe` and lets the check pass without

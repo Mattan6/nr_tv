@@ -13,18 +13,18 @@ const TV_SAFE_AREA = { x: 0.04, y: 0.03 };
 //
 // What this route is for is the layout choice, not the viewport. An Android TV WebView
 // reports about 960x540, and with browser chrome over it the height falls under the 500px
-// clause in hooks/useIsMobile.js, so / answers with the phone layout. Rendering
-// SynagogueDisplay here directly settles that: the wall layout regardless of what the set
-// reports.
+// clause in hooks/useIsMobile.js, so / answers with the phone layout. Rendering whichever of
+// the two boards belongs here directly settles that: the wall layout regardless of what the
+// set reports.
 //
 // It deliberately does NOT override the viewport width, and adding one back will break the
-// display. SynagogueDisplay scales a fixed 1920x1080 canvas to window.innerWidth/Height,
-// so at device-width it already fills the panel exactly — a 960x540 viewport at 2x device
-// pixels IS 1920x1080 of real pixels, and text lands at precisely the size a 1:1 render
-// would give. A wider viewport cannot make it physically bigger, because the canvas fills
-// the panel either way. What it does do is lay the page out at a width the WebView then
-// declines to zoom out to fit (useWideViewPort without loadWithOverviewMode), leaving a
-// quarter of the display hanging off the right and bottom edges.
+// display. Both boards scale a fixed 1920x1080 canvas to window.innerWidth/Height, so at
+// device-width it already fills the panel exactly — a 960x540 viewport at 2x device pixels IS
+// 1920x1080 of real pixels, and text lands at precisely the size a 1:1 render would give. A
+// wider viewport cannot make it physically bigger, because the canvas fills the panel either
+// way. What it does do is lay the page out at a width the WebView then declines to zoom out to
+// fit (useWideViewPort without loadWithOverviewMode), leaving a quarter of the display hanging
+// off the right and bottom edges.
 
 // A typed URL can pin the board: /tv?screen=shabbat, /tv?screen=weekday. Read once, at mount.
 //
@@ -32,6 +32,15 @@ const TV_SAFE_AREA = { x: 0.04, y: 0.03 };
 // remote cannot arrive here by accident, and a reload of the plain /tv address always restores
 // the schedule — the toggle's override, by contrast, outlived the segment it was cast in.
 // It is how this layout gets reviewed on a Tuesday.
+//
+// The two values are NOT symmetric, and that is intentional. `?screen=shabbat` mounts
+// ShabbatDisplay, which calls useDisplayModel('shabbat') — forceScreen pins both the layout
+// AND the schedule it shows, so this previews Shabbat cleanly on any day. `?screen=weekday`
+// mounts SynagogueDisplay, whose model has no forceScreen and so still follows the calendar —
+// this pins only the LAYOUT. On a Saturday, `?screen=weekday` therefore shows the dark board
+// running the Shabbat prayer list, not the weekday one. That is the one combination this query
+// param cannot preview in isolation, and it is correct: SynagogueDisplay never stops following
+// the calendar just because a URL asked to see it.
 const previewScreen = () => {
   const value = new URLSearchParams(window.location.search).get('screen');
   return value === 'shabbat' || value === 'weekday' ? value : null;

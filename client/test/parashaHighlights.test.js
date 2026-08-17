@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parashaKey, parashaHighlights } from '../src/components/display/parashaHighlights.js';
 import { PARASHA_HIGHLIGHTS, FALLBACK } from '../src/components/display/parashaHighlights.data.js';
+import { HEBCAL_PARASHIYOT } from './fixtures/hebcal-parashiyot.js';
 
 const MAQAF = '־';
 
@@ -64,6 +65,10 @@ test('the fallback carries verses and no haftara', () => {
 // paseq, sof pasuk, and the puncta-extraordinaria/nun-hafukha family) — not just the
 // cantillation range — so this test enforces the same invariant the generator promises,
 // rather than a narrower approximation a future Masoretic marker could slip past unnoticed.
+// NIKUD_PRESENT is not held to the same standard: it only needs ONE nikud mark to prove the
+// text is pointed at all, so it is deliberately narrower than the generator's own NIKUD —
+// U+05C1/U+05C2 (shin/sin dot) and U+05C7 (qamatz qatan) are absent here, not because they
+// would fail the check, but because the common vowel points below already do the job.
 const FORBIDDEN = /[\u0591-\u05AF\u05BD\u05BF\u05C0\u05C3-\u05C6]/;
 const NIKUD_PRESENT = /[\u05B0-\u05BC]/;
 
@@ -97,7 +102,7 @@ test('every entry is renderable', () => {
 });
 
 test('all seven combined pairs are keyed', () => {
-  for (const pair of ['ויקהל־פקודי', 'תזריע־מצורע', 'אחרי מות־קדושים', 'בהר־בחוקותי', 'חוקת־בלק', 'מטות־מסעי', 'נצבים־וילך']) {
+  for (const pair of ['ויקהל־פקודי', 'תזריע־מצרע', 'אחרי מות־קדשים', 'בהר־בחקתי', 'חוקת־בלק', 'מטות־מסעי', 'נצבים־וילך']) {
     assert.notEqual(parashaHighlights(`פרשת ${pair}`), FALLBACK, pair);
   }
 });
@@ -114,5 +119,25 @@ test('every table key is already canonical', () => {
   // a key the lookup would normalize differently is a key nothing can ever reach.
   for (const key of Object.keys(PARASHA_HIGHLIGHTS)) {
     assert.equal(parashaKey(`פרשת ${key}`), key);
+  }
+});
+
+// I1: the test above only checks the table against itself — every key it has is trivially
+// "canonical" by its own construction, so it cannot catch the table having curated the WRONG
+// spelling. The one time this seam broke, it was found in production, not by this suite: the
+// curation guessed wrong for six parashiyot — four used the plene spelling where Hebcal's
+// response uses the ktiv chaser one (מצרע, קדשים, בחקתי, בהעלתך), one used the ktiv chaser
+// spelling where Hebcal uses plene (קורח), and one used a bare short name where Hebcal always
+// sends both words (שלח לך). Every one of those weeks silently rendered the fallback verses
+// with no haftara line and nothing on screen to say so — see the "Keyed '...'" comments in
+// scripts/parashaCuration.mjs for the fix. This test pins it by replaying real Hebcal output,
+// captured once into fixtures/hebcal-parashiyot.js (see that file's header for exactly what
+// was requested, when, and how to recapture it) rather than trusting the table's own idea of
+// its vocabulary.
+test('every parasha name Hebcal has actually sent resolves to a real entry', () => {
+  for (const [year, names] of Object.entries(HEBCAL_PARASHIYOT)) {
+    for (const name of names) {
+      assert.notEqual(parashaHighlights(name), FALLBACK, `${year}: "${name}" fell back`);
+    }
   }
 });
