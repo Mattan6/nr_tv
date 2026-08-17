@@ -192,6 +192,25 @@ test('backfills an absent ticker with the seed lines rather than quarantining th
   assert.strictEqual(doc.announcements.length, DEFAULT_CONTENT.announcements.length);
 });
 
+// שיעורים was split into a חול list and a שבת list. The שבת key is the newest member of
+// BACKFILL_KEYS, and it is the one whose seed is deliberately EMPTY: an upgrading shul
+// keeps every שיעור it already had on the חול list and starts the שבת list blank, rather
+// than having its existing list silently copied into both.
+test('backfills an absent שבת שיעורים list as empty without quarantining the file', async (t) => {
+  const { store, file } = await tmpStore(t);
+  const legacy = structuredClone(DEFAULT_CONTENT);
+  delete legacy.shiurimShabbat;
+  await fs.writeFile(file, JSON.stringify(legacy), 'utf8');
+
+  const doc = await store.read();
+
+  assert.deepStrictEqual(doc.shiurimShabbat, []);
+  // The whole point of the split: the חול list is untouched, not copied and not emptied.
+  assert.strictEqual(doc.shiurim.length, DEFAULT_CONTENT.shiurim.length);
+  // The document was not treated as wrong-shaped — the gabbai's real content survived.
+  assert.strictEqual(doc.announcements.length, DEFAULT_CONTENT.announcements.length);
+});
+
 test('leaves an explicitly empty ticker empty', async (t) => {
   const { store, file } = await tmpStore(t);
   const emptied = structuredClone(DEFAULT_CONTENT);

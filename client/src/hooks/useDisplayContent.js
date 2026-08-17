@@ -6,7 +6,18 @@ const CACHE_KEY = 'synagogue-display-content';
 // `jokes` is scraper-owned rather than admin-edited, but it travels in the same document
 // and carries the same isActive flag, so it needs nothing special here beyond a key —
 // activeOnly derives its panel list from this object.
-const EMPTY_LISTS = { announcements: [], shiurim: [], mazal: [], azkarot: [], jokes: [], ticker: [] };
+const EMPTY_LISTS = {
+  announcements: [],
+  shiurim: [],
+  // The שבת list. Legitimately empty until the gabbai fills it — the server seeds it that
+  // way on purpose (see BACKFILL_KEYS in server/src/store/contentStore.js), so an empty
+  // array here is the normal state and not a failed load.
+  shiurimShabbat: [],
+  mazal: [],
+  azkarot: [],
+  jokes: [],
+  ticker: [],
+};
 
 // The שבת time overrides. A single record rather than a list — there is nothing to filter,
 // only to default, and it is defaulted rather than passed straight through because a

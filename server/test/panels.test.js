@@ -3,9 +3,17 @@ const assert = require('node:assert');
 
 const { isPanel, validateItem, validateSettings, PANEL_KEYS } = require('../src/store/panels');
 
-test('recognises exactly the five panels', () => {
-  assert.deepStrictEqual(PANEL_KEYS, ['announcements', 'shiurim', 'mazal', 'azkarot', 'ticker']);
+test('recognises exactly the six panels', () => {
+  assert.deepStrictEqual(PANEL_KEYS, [
+    'announcements',
+    'shiurim',
+    'shiurimShabbat',
+    'mazal',
+    'azkarot',
+    'ticker',
+  ]);
   assert.strictEqual(isPanel('shiurim'), true);
+  assert.strictEqual(isPanel('shiurimShabbat'), true);
   assert.strictEqual(isPanel('ticker'), true);
   assert.strictEqual(isPanel('parnas'), false);
   // 'settings' travels in the same document but is a single record, not a panel — it has
@@ -13,6 +21,24 @@ test('recognises exactly the five panels', () => {
   assert.strictEqual(isPanel('settings'), false);
   // Guards against inherited Object properties being treated as panels.
   assert.strictEqual(isPanel('constructor'), false);
+});
+
+// The two שיעורים panels are one schema mounted twice — חול and שבת. They must validate
+// identically, because the admin screens and the controller are the same code for both;
+// a divergence would mean a time the gabbai can save on one list and not the other.
+test('the שבת שיעורים panel validates exactly like the חול one', () => {
+  const item = { name: 'שיעור בפרשה', time: '16:15', by: 'הרב מוטה' };
+  assert.deepStrictEqual(
+    validateItem('shiurimShabbat', item).fields,
+    validateItem('shiurim', item).fields
+  );
+
+  for (const bad of [{ ...item, time: '25:00' }, { ...item, name: '' }, { ...item, by: '' }]) {
+    assert.deepStrictEqual(
+      Object.keys(validateItem('shiurimShabbat', bad).errors || {}),
+      Object.keys(validateItem('shiurim', bad).errors || {})
+    );
+  }
 });
 
 test('accepts a valid item and trims it', () => {

@@ -12,15 +12,26 @@ const MAX_LEN = 300;
 // every write serializes and fsyncs the whole document.
 const MAX_ITEMS = 500;
 
+// One schema, mounted as two panels: שיעורי חול and שיעורי שבת. Shared by reference rather
+// than written twice because one controller and one pair of admin screens serve both, so a
+// divergence between them could only ever be a bug — a time the gabbai can save on one list
+// and not on the other. validateItem only reads it, so the shared reference is safe.
+const SHIUR_FIELDS = {
+  name: { required: true },
+  time: { required: true, pattern: TIME_RE, message: 'שעה חייבת להיות בפורמט 06:45' },
+  by: { required: true },
+};
+
 const PANELS = {
   announcements: {
     text: { required: true },
   },
-  shiurim: {
-    name: { required: true },
-    time: { required: true, pattern: TIME_RE, message: 'שעה חייבת להיות בפורמט 06:45' },
-    by: { required: true },
-  },
+  // Two lists, because a שיעור that meets on a weekday and one that meets on שבת are
+  // different events; before the split both boards drew from one list and each showed the
+  // other's. Which list reaches a screen is decided by the day, not by the layout — see
+  // useDisplayModel.
+  shiurim: SHIUR_FIELDS,
+  shiurimShabbat: SHIUR_FIELDS,
   mazal: {
     names: { required: true },
     occasion: { required: true },

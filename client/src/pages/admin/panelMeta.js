@@ -2,6 +2,15 @@
 // server/src/store/panels.js; the server owns validation, this owns the Hebrew.
 // The duplication is deliberate — deriving one from the other would couple
 // validation to UI copy. Adding a field means editing both.
+// Shared by the two שיעורים panels, mirroring SHIUR_FIELDS in server/src/store/panels.js.
+// Same reasoning as there: one controller and one pair of screens serve both lists, so a
+// field that differed between them could only ever be a bug.
+const SHIUR_FIELDS = [
+  { key: 'name', label: 'שם השיעור', type: 'text', required: true },
+  { key: 'time', label: 'שעה', type: 'time', required: true },
+  { key: 'by', label: 'מגיד השיעור', type: 'text', required: true },
+];
+
 export const PANEL_META = {
   announcements: {
     title: 'הודעות',
@@ -12,16 +21,24 @@ export const PANEL_META = {
     summary: (item) => item.text,
     sub: () => '',
   },
+  // Two שיעורים panels, distinguished by their titles rather than by a field inside one
+  // list. The gabbai edits "the שבת list", not "a שיעור with a שבת flag" — and the display
+  // picks a whole list per day, so the split matches how both sides already think.
   shiurim: {
-    title: 'שיעורי תורה',
+    title: 'שיעורי תורה · חול',
     icon: '📖',
     addLabel: 'הוסף שיעור',
     emptyLabel: 'אין שיעורים',
-    fields: [
-      { key: 'name', label: 'שם השיעור', type: 'text', required: true },
-      { key: 'time', label: 'שעה', type: 'time', required: true },
-      { key: 'by', label: 'מגיד השיעור', type: 'text', required: true },
-    ],
+    fields: SHIUR_FIELDS,
+    summary: (item) => `${item.name} · ${item.time}`,
+    sub: (item) => item.by,
+  },
+  shiurimShabbat: {
+    title: 'שיעורי תורה · שבת',
+    icon: '🕯',
+    addLabel: 'הוסף שיעור בשבת',
+    emptyLabel: 'אין שיעורים בשבת',
+    fields: SHIUR_FIELDS,
     summary: (item) => `${item.name} · ${item.time}`,
     sub: (item) => item.by,
   },

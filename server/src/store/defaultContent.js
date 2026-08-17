@@ -19,6 +19,12 @@ module.exports = {
     { id: 'seed-shi-4', name: 'שיעור לנשים', time: '16:45', by: 'הרב ורהפטיג', isActive: true },
     { id: 'seed-shi-5', name: 'שיעור הלכה', time: '20:00', by: 'הרב יגאל', isActive: true },
   ],
+  // שיעורי שבת, and deliberately empty — for a fresh install as much as for an upgrade.
+  // Seeding it would put invented שיעורים on a real shul's שבת board the first time it
+  // booted, and backfilling an upgrade from that seed would do the same to a shul whose
+  // real list is the חול one above. Empty is the only value that is honest in both cases;
+  // the gabbai fills it from /adminGabbai. Until he does, the שבת board's card says so.
+  shiurimShabbat: [],
   mazal: [
     { id: 'seed-maz-1', names: 'משפחת בן חמו', occasion: 'להולדת הבן — מזל טוב!', isActive: true },
     { id: 'seed-maz-2', names: 'משפחת אזולאי', occasion: 'לרגל האירוסין — בשעה טובה', isActive: true },

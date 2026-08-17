@@ -62,7 +62,17 @@ export default function useDisplayModel(forceScreen) {
   // JOKE_ROTATE_MS. Same render-time modulo as `pick` below, for the same reason: the pool
   // grows when the server scrapes, and an index must never point past the current list.
   const [jokeTick, setJokeTick] = useState(0);
-  const { announcements, shiurim, mazal, azkarot, jokes, ticker, settings } = useDisplayContent();
+  // Two שיעורים lists arrive; one is chosen below, on the day rather than on the layout.
+  const {
+    announcements,
+    shiurim: weekdayShiurim,
+    shiurimShabbat,
+    mazal,
+    azkarot,
+    jokes,
+    ticker,
+    settings,
+  } = useDisplayContent();
   const [zmanimTimes, setZmanimTimes] = useState(null);
   const [minchaTime, setMinchaTime] = useState(null);
   // The הנץ the שחרית row posts, already formatted. Its own state rather than a field on
@@ -251,6 +261,19 @@ export default function useDisplayModel(forceScreen) {
   const prayersTitle = isShab ? 'זמני תפילות · שבת' : 'זמני תפילות · חול';
   const prayersSub = isShab ? parasha || 'שבת קודש' : weekday;
   const next = computeNextMinyan(now, prayers);
+
+  // Which שיעורים list reaches a screen is decided by the DAY, not by the layout — the same
+  // `isShab` that already picks the prayer schedule two lines up.
+  //
+  // That distinction is the whole design. The dark board is not "the weekday board": it is
+  // what `/` and every phone show on Shabbat too, so keying off the layout would post
+  // weekday שיעורים to a congregant checking his phone in shul on Shabbat morning. Keying
+  // off the day means all three layouts agree, and the חול/שבת toggle on `/` moves the
+  // שיעורים along with the prayer times rather than leaving them contradicting each other.
+  //
+  // Returned as plain `shiurim`, so ShiurimPanel, the phone's ShiurimCard and the שבת
+  // board's ShiurimCard all keep reading one key and none of them had to change.
+  const shiurim = isShab ? shiurimShabbat : weekdayShiurim;
 
   // Same Asia/Jerusalem formatter the prayer rows use, so the two panels can never
   // disagree by an hour on a device whose timezone is set wrong.

@@ -23,7 +23,12 @@ const PANEL_ARRAY_KEYS = ['announcements', 'shiurim', 'mazal', 'azkarot'];
 // upgrading a server keeps the four ticker lines the wall has always shown. A key that is
 // present but empty means the gabbai emptied it on purpose, and is left alone; otherwise
 // clearing the ticker would silently refill itself on the next restart.
-const BACKFILL_KEYS = ['ticker', 'settings'];
+//
+// `shiurimShabbat` is the newest member and the one whose seed is deliberately EMPTY. The
+// other backfilled keys restore what the wall used to show; this one must not, because an
+// upgrading shul already has its שיעורים on the חול list and copying them into both would
+// put every weekday שיעור on the שבת board — the exact overlap the split exists to remove.
+const BACKFILL_KEYS = ['ticker', 'settings', 'shiurimShabbat'];
 
 function withDefaults(doc) {
   for (const key of BACKFILL_KEYS) {
