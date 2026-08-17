@@ -38,11 +38,17 @@ export const CandleCard = ({ candles, sunset }) => (
   </EdgeShell>
 );
 
-// `tzeit` is Saturday's שקיעה + 18, the same reckoning the זמנים grid uses. `tzeitRT` is
-// Saturday's צאת ר״ת, read straight off Hebcal.
-export const HavdalahCard = ({ tzeit, tzeitRT }) => (
+// `havdalah` is Hebcal's end of Shabbat — the sun 8.5° below the horizon — and NOT the
+// שקיעה + 18 that this shul reckons צאת הכוכבים by for davening ערבית. This card shipped
+// showing that offset and was nineteen minutes early on the wall; the two are different
+// zmanim and only one of them ends Shabbat. See shabbatCardTimes in displayData.js.
+//
+// It follows that this number is later than the ערבית מוצ״ש row in the יום השבת card, and
+// that is correct rather than a contradiction: the shul davens ערבית at its own minyan time
+// and Shabbat goes out afterwards.
+export const HavdalahCard = ({ havdalah, tzeitRT }) => (
   <EdgeShell icon={<HavdalahSet />} title="מוֹצָאֵי שַׁבָּת">
-    <Big>{clock(tzeit)}</Big>
+    <Big>{clock(havdalah)}</Big>
     <Sub>הבדלה · ר״ת {clock(tzeitRT)}</Sub>
   </EdgeShell>
 );

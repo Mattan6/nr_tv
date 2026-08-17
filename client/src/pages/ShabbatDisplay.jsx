@@ -90,7 +90,7 @@ const ShabbatDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
             <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1.1fr 1fr', gap: '20px', flex: 'none' }}>
               <CandleCard candles={shabbatCards.candles} sunset={shabbatCards.fridaySunset} />
               <NextPrayerCard next={next} />
-              <HavdalahCard tzeit={shabbatCards.tzeit} tzeitRT={shabbatCards.tzeitRT} />
+              <HavdalahCard havdalah={shabbatCards.havdalah} tzeitRT={shabbatCards.tzeitRT} />
             </div>
 
             <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1.1fr 1.1fr 1fr', gap: '20px', minHeight: 0, paddingBottom: '4px' }}>

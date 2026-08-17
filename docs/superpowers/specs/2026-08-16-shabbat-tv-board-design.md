@@ -98,7 +98,7 @@ before the congregation does.
 | הדלקת נרות | `resolveShabbatTimes().shabCandles` (gabbai override or Hebcal) | no |
 | שקיעת החמה, on the candle card | Friday's zmanim | **yes** (new fetch leg) |
 | התפילה הבאה | `computeNextMinyan` over the שבת list | no |
-| צאת הכוכבים, on the havdalah card | Saturday's שקיעה + `TZEIT_AFTER_SUNSET_MIN` | no (already fetched) |
+| מוצאי שבת, on the havdalah card | Hebcal's `havdalah` (sun 8.5° below the horizon) | no (already fetched) |
 | צאת ר״ת | Saturday's `tzeit72min` | **yes** (already fetched, currently discarded) |
 | ערב שבת rows | `SHABBAT_PRAYERS` where `day === 5`, less הדלקת נרות | no |
 | יום השבת rows | `SHABBAT_PRAYERS` where `day === 6` | no |
@@ -138,10 +138,23 @@ fields — nothing else changes about that leg.
 `shabbatAnchorTimes` gains `fridaySunset` and `saturdayTzeit72`. `resolveShabbatTimes`
 destructures the three keys it needs and is not touched; extra keys pass through it unread.
 
-**צאת הכוכבים is computed the shul's way, not Hebcal's.** The havdalah card reads
-`toClock(saturdaySunset, TZEIT_AFTER_SUNSET_MIN)` — the same constant the זמנים panel's צאת
-row uses (`displayData.js:90`). Reading one of Hebcal's own tzeit fields here instead would put
-two different צאת הכוכבים on one screen, twenty-odd minutes apart in July.
+**מוצאי שבת is Hebcal's הבדלה.** The card reads `toClock(havdalah)` — the sun 8.5° below the
+horizon, already requested with `M=on` for winter's ערבית — and not שקיעה + `TZEIT_AFTER_SUNSET_MIN`.
+
+> **Corrected after the board shipped.** This section originally specified the sunset-plus-offset
+> reckoning, arguing that reading a different value here "would put two different צאת הכוכבים on
+> one screen, twenty-odd minutes apart in July." That argument was wrong, and it put a wrong time
+> on a synagogue wall: for 2026-08-22 in Nitzan the card posted 19:36 against a real end of
+> Shabbat of 19:55 — telling the congregation Shabbat was out nineteen minutes early.
+>
+> The two values are different *zmanim*, not two sources for one. `TZEIT_AFTER_SUNSET_MIN` is
+> this shul's צאת הכוכבים for **davening ערבית**; הבדלה is when **מלאכה is permitted again**, and
+> it is later. The gap is the halacha, not an inconsistency to design away. The codebase already
+> encoded the distinction — `SHABBAT_CONFIG.arvitBefore.winter` has always counted ערבית back
+> from `havdalah` rather than from צאת — so this card was the only place that collapsed them.
+>
+> A consequence worth stating: this number is later than the ערבית מוצ״ש row on the same board.
+> That is correct. The shul davens ערבית at its own minyan time and Shabbat goes out afterwards.
 
 ### Splitting the prayer list
 
@@ -355,13 +368,17 @@ tested; that is what the visual pass below is for.
    candle card and the מנחה וקבלת שבת row under it.
 3. The three top cards on **Friday** and again on **Saturday** — הדלקת נרות and its sunset must
    not move between the two days; מוצאי שבת must not either.
-4. צאת הכוכבים on the havdalah card equals the צאת הכוכבים row in the זמנים grid — the same
-   number, not merely two labels for the same idea. It is not the only pair on the board with
-   two plausible sources: שקיעת החמה is printed twice as well, Friday's on the candle card and
-   (from Saturday onward) today's in the זמנים grid, and those two are supposed to differ. That
-   pair does not get an equality check — it gets a label, `שקיעת החמה (שישי)`, so the two numbers
-   read as two different things rather than as a contradiction. צאת הכוכבים is the pair that
-   actually has to match.
+4. מוצאי שבת on the havdalah card equals Hebcal's `havdalah` for that Saturday — check it
+   against `hebcal.com/shabbat?...&M=on` directly, not against anything else on the board. It
+   must be **later** than both the זמנים grid's צאת הכוכבים row and the ערבית מוצ״ש prayer row;
+   if it ever equals the צאת row, the sunset-plus-offset reckoning has been reintroduced and the
+   board is telling people Shabbat is out early. `client/test/screenSegment.test.js` asserts
+   that inequality directly, for exactly that reason.
+
+   Nothing else on this board is a pair that has to match. שקיעת החמה is printed twice —
+   Friday's on the candle card and (from Saturday onward) today's in the זמנים grid — and those
+   two are supposed to differ; that pair is disambiguated by its label, `שקיעת החמה (שישי)`,
+   rather than by an equality check.
 5. Cross Friday 09:00 with the page left open: the board swaps without a reload. Cross Saturday
    24:00 the same way. Both under `TZ` set to something other than Israel — **via PowerShell**,
    not Git Bash, which does not propagate `TZ` to `node.exe` and lets the check pass without

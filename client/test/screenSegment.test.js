@@ -6,6 +6,7 @@ import {
   upcomingSaturday,
   shabbatCardTimes,
   TZEIT_AFTER_SUNSET_MIN,
+  toClock,
   SHABBAT_PRAYERS,
   resolvePrayers,
 } from '../src/components/display/displayData.js';
@@ -68,34 +69,44 @@ test('shabbatFriday reads Israel\'s calendar, not the device\'s', () => {
   assert.equal(ymd(shabbatFriday(at('2026-08-22T22:00:00+03:00'))), '2026-08-21');
 });
 
-// Israel, high summer: sunset around 19:40, so צאת lands at 19:58 and ר״ת at 20:52.
+// Israel, high summer. The real numbers Hebcal returns for Nitzan on 2026-08-22: sunset
+// 19:17, and havdalah at 8.5° below the horizon 38 minutes later at 19:55.
 const ANCHORS = {
-  fridaySunset: '2026-08-21T19:41:00+03:00',
-  saturdaySunset: '2026-08-22T19:40:00+03:00',
-  saturdayTzeit72: '2026-08-22T20:52:00+03:00',
+  fridaySunset: '2026-08-21T19:18:00+03:00',
+  saturdaySunset: '2026-08-22T19:17:00+03:00',
+  saturdayTzeit72: '2026-08-22T20:29:00+03:00',
+  havdalah: '2026-08-22T19:55:00+03:00',
 };
 
 test('the candle card gets Friday\'s sunset, not Saturday\'s', () => {
-  assert.equal(shabbatCardTimes(ANCHORS).fridaySunset, '19:41');
+  assert.equal(shabbatCardTimes(ANCHORS).fridaySunset, '19:18');
 });
 
-test('צאת הכוכבים is שקיעה plus the shul\'s own offset, not a Hebcal field', () => {
-  assert.equal(TZEIT_AFTER_SUNSET_MIN, 18);
-  assert.equal(shabbatCardTimes(ANCHORS).tzeit, '19:58');
+// The bug this replaced: the card posted שקיעה + TZEIT_AFTER_SUNSET_MIN — צאת הכוכבים as
+// this shul reckons it for davening ערבית — under a heading reading מוצאי שבת. That is a
+// different zman and it is EARLIER: 19:35 against a real end of Shabbat at 19:55, so the
+// board told the congregation Shabbat was out nineteen minutes before it was.
+//
+// The assertion is deliberately written as a comparison rather than a literal, so that it
+// fails if anyone reintroduces the sunset-plus-offset reckoning here for any reason.
+test('מוצאי שבת is Hebcal\'s הבדלה, never שקיעה plus the ערבית offset', () => {
+  const { havdalah } = shabbatCardTimes(ANCHORS);
+  assert.equal(havdalah, '19:55');
+  assert.notEqual(havdalah, toClock(ANCHORS.saturdaySunset, TZEIT_AFTER_SUNSET_MIN));
 });
 
 test('צאת ר״ת is read straight off Saturday\'s zmanim', () => {
-  assert.equal(shabbatCardTimes(ANCHORS).tzeitRT, '20:52');
+  assert.equal(shabbatCardTimes(ANCHORS).tzeitRT, '20:29');
 });
 
 test('a missing anchor is null, never a stale or invented time', () => {
-  const partial = shabbatCardTimes({ saturdaySunset: ANCHORS.saturdaySunset });
+  const partial = shabbatCardTimes({ havdalah: ANCHORS.havdalah });
   assert.equal(partial.fridaySunset, null);
   assert.equal(partial.tzeitRT, null);
-  assert.equal(partial.tzeit, '19:58');
+  assert.equal(partial.havdalah, '19:55');
   const nothing = shabbatCardTimes();
   assert.equal(nothing.fridaySunset, null);
-  assert.equal(nothing.tzeit, null);
+  assert.equal(nothing.havdalah, null);
   assert.equal(nothing.tzeitRT, null);
 });
 

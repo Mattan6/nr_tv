@@ -455,20 +455,27 @@ function arvitTime(season, { havdalah, saturdaySunset }, config) {
 // Pure string arithmetic over anchors the hook already holds, kept out of the hook so it is
 // testable without a Hebcal round trip — the same reason resolveShabbatTimes lives here.
 //
-// צאת הכוכבים is computed the shul's way, שקיעה + TZEIT_AFTER_SUNSET_MIN, and deliberately NOT
-// read off one of Hebcal's tzeit fields. The same zman is already on screen a few centimetres
-// away in the זמנים grid, which computes it that way through ZMANIM_ROWS; a second source would
-// put two numbers twenty-two minutes apart on one board in July.
+// מוצאי שבת is Hebcal's הבדלה — the sun 8.5° below the horizon, requested with `M=on` in
+// services/hebcal.js — and NOT שקיעה + TZEIT_AFTER_SUNSET_MIN.
+//
+// The card shipped reading that offset and was wrong on the wall by nineteen minutes: for
+// 2026-08-22 in Nitzan it posted 19:35 against a real end of Shabbat at 19:55. The two are
+// different zmanim and only one of them ends Shabbat. TZEIT_AFTER_SUNSET_MIN is this shul's
+// צאת הכוכבים for *davening ערבית*; הבדלה is when מלאכה is permitted again, and it is later.
+//
+// The argument that produced the bug was that showing Hebcal's value here would put two
+// different numbers on one board. It would — and it should. That gap is the halacha, not an
+// inconsistency to design away. The codebase already knew: SHABBAT_CONFIG.arvitBefore.winter
+// has always counted ערבית back from `havdalah` rather than from צאת, so הבדלה was a separate
+// anchor everywhere except on this card.
 //
 // Any missing anchor yields null, which every consumer renders as '--:--'. A card never shows
-// last week's number.
-export function shabbatCardTimes(
-  { fridaySunset, saturdaySunset, saturdayTzeit72 } = {},
-  config = SHABBAT_CONFIG
-) {
+// last week's number — and for this one, showing nothing is very much better than showing a
+// time that lets someone end Shabbat early.
+export function shabbatCardTimes({ fridaySunset, saturdayTzeit72, havdalah } = {}) {
   return {
     fridaySunset: toClock(fridaySunset),
-    tzeit: toClock(saturdaySunset, config.tzeitAfterSunsetMin),
+    havdalah: toClock(havdalah),
     tzeitRT: toClock(saturdayTzeit72),
   };
 }
