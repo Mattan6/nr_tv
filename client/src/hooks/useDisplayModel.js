@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getZmanim, getParasha } from '../services/hebcal';
+import seededShuffle from '../utils/seededShuffle';
 import {
   WEEKDAY_PRAYERS,
   SHABBAT_PRAYERS,
@@ -62,6 +63,10 @@ export default function useDisplayModel(forceScreen) {
   // JOKE_ROTATE_MS. Same render-time modulo as `pick` below, for the same reason: the pool
   // grows when the server scrapes, and an index must never point past the current list.
   const [jokeTick, setJokeTick] = useState(0);
+  // One random number for the life of this mount, and the only source of randomness on the
+  // board. It orders the joke pool (see below) — drawn once in a lazy initialiser so React
+  // cannot redraw it on a re-render, which would reshuffle mid-view.
+  const [jokeSeed] = useState(() => Math.floor(Math.random() * 2 ** 32));
   // Two שיעורים lists arrive; one is chosen below, on the day rather than on the layout.
   const {
     announcements,
@@ -304,7 +309,24 @@ export default function useDisplayModel(forceScreen) {
   const maz = pick(mazal) || {};
   const azk = pick(azkarot) || {};
   // Its own counter, so `pick` (which is on the 6.5s tick) can't be reused here.
-  const joke = jokes.length ? jokes[jokeTick % jokes.length] : null;
+  //
+  // Shuffled per mount rather than walked in the order the server sends. That order is fixed
+  // — jokes/refresh.js appends with `push` and never reorders — so a counter starting at zero
+  // opened every single page load on the same joke and showed the same handful after it. With
+  // ~150 jokes in the pool and a 30-second rotation, a congregant glancing at their phone
+  // never saw any of the rest.
+  //
+  // The other rotating panels deliberately do NOT get this. הודעות, מזל טוב and אזכרות hold a
+  // handful of items each that the gabbai wants all of, so a fixed order is a feature there;
+  // the jokes pool is two orders of magnitude deeper and the entry point is what decides
+  // whether most of it is ever seen.
+  //
+  // Memoized against the pool's identity, so the shuffle runs on the 30-second poll rather
+  // than on the one-second clock tick. Correctness does not depend on that: seededShuffle is
+  // a pure function of the pool and the seed, so a recomputation returns the same order. The
+  // memo is only there to keep 150 swaps off a page that stays open for weeks.
+  const shuffledJokes = useMemo(() => seededShuffle(jokes, jokeSeed), [jokes, jokeSeed]);
+  const joke = shuffledJokes.length ? shuffledJokes[jokeTick % shuffledJokes.length] : null;
   // Rotates on the shared 6.5s counter, like ann/maz/azk — one clock for the whole board.
   const pasuk = highlights.pesukim.length ? highlights.pesukim[tick % highlights.pesukim.length] : null;
 
