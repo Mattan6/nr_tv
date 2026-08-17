@@ -15,7 +15,7 @@ import useCanvasScale from '../hooks/useCanvasScale';
 //
 // safeArea holds back a fraction of each axis before fitting, for TVs that crop their own
 // edges — pages/TvDisplay.jsx passes it. Zero is a no-op, so / fits exactly as it always has.
-const SynagogueDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
+const SynagogueDisplay = ({ safeArea = { x: 0, y: 0 }, showToggle = true }) => {
   const scale = useCanvasScale(safeArea);
   const {
     screen,
@@ -74,6 +74,7 @@ const SynagogueDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
             greg={greg}
             parasha={parasha}
             screen={screen}
+            showToggle={showToggle}
             onSetChol={() => setScreen('weekday')}
             onSetShab={() => setScreen('shabbat')}
           />

@@ -2,6 +2,7 @@ import SynagogueDisplay from './SynagogueDisplay';
 import ShabbatDisplay from './ShabbatDisplay';
 import KeepAwake from '../components/KeepAwake';
 import NightlyReload from '../components/NightlyReload';
+import useScheduledScreen from '../hooks/useScheduledScreen';
 
 // TVs crop the panel edges, and how much varies by set. Pulling the canvas in by this
 // much costs a little size and buys back the top bar and the ticker, which sit at the
@@ -37,8 +38,13 @@ const previewScreen = () => {
 };
 
 const TvDisplay = () => {
-  const screen = previewScreen();
+  // The query wins when it is present, and it can only be present if someone typed it.
+  const scheduled = useScheduledScreen();
+  const screen = previewScreen() || scheduled;
   return (
+    // Holds no layout of its own — only the attribute the TV-only focus rules in index.css
+    // hang off. Whichever of the two boards below is mounted positions itself against the
+    // viewport exactly as on /.
     <div data-tv>
       {/* The box's screensaver takes the screen after a few minutes and its firmware offers no
           "never", so the page has to hold the screen itself. Mounted only here: this is the
@@ -51,7 +57,7 @@ const TvDisplay = () => {
       {screen === 'shabbat' ? (
         <ShabbatDisplay safeArea={TV_SAFE_AREA} />
       ) : (
-        <SynagogueDisplay safeArea={TV_SAFE_AREA} />
+        <SynagogueDisplay safeArea={TV_SAFE_AREA} showToggle={false} />
       )}
     </div>
   );

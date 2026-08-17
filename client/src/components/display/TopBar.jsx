@@ -32,7 +32,11 @@ const activate = (fn) => (e) => {
   fn();
 };
 
-const TopBar = ({ weekday, hebDate, greg, parasha, screen, onSetChol, onSetShab }) => {
+// `showToggle` is false on /tv. The חול/שבת override outlives the segment it was cast in, so on
+// a TV — whose only input is a remote and whose שבת board has no chips of its own — pressing שבת
+// on a Wednesday would strand the screen on a board with no way back until Sunday 00:00. /tv is
+// schedule-driven end to end instead; `/` on a desktop keeps both chips.
+const TopBar = ({ weekday, hebDate, greg, parasha, screen, onSetChol, onSetShab, showToggle = true }) => {
   const isShab = screen === 'shabbat';
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px' }}>
@@ -60,10 +64,12 @@ const TopBar = ({ weekday, hebDate, greg, parasha, screen, onSetChol, onSetShab 
 
       {/* Left: chol/shabbat toggle + BH */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px' }}>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <div role="button" tabIndex={0} onClick={onSetChol} onKeyDown={activate(onSetChol)} style={isShab ? TOGGLE_IDLE : TOGGLE_ACTIVE}>חול</div>
-          <div role="button" tabIndex={0} onClick={onSetShab} onKeyDown={activate(onSetShab)} style={isShab ? TOGGLE_ACTIVE : TOGGLE_IDLE}>שבת</div>
-        </div>
+        {showToggle && (
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <div role="button" tabIndex={0} onClick={onSetChol} onKeyDown={activate(onSetChol)} style={isShab ? TOGGLE_IDLE : TOGGLE_ACTIVE}>חול</div>
+            <div role="button" tabIndex={0} onClick={onSetShab} onKeyDown={activate(onSetShab)} style={isShab ? TOGGLE_ACTIVE : TOGGLE_IDLE}>שבת</div>
+          </div>
+        )}
         <div style={{ fontFamily: "'Frank Ruhl Libre',serif", fontSize: '19px', color: '#6f7889', letterSpacing: '1px' }}>ב״ה</div>
       </div>
     </div>
