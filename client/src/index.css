@@ -10,6 +10,16 @@
   box-sizing: border-box;
 }
 
+/* Both boards paint their own fixed palettes — the wall board is dark by design and the שבת
+   board is light by design — so no browser may re-derive either. Without this, Android's
+   algorithmic dark mode inverted the שבת board on the shul's TV: white cards rendered
+   near-black and the navy masthead rendered bright blue. `only light` is the strong form; it
+   tells the UA the page supports exactly one scheme and that it must not transform it.
+   The matching meta tag in index.html carries the same declaration earlier in the load. */
+:root {
+  color-scheme: only light;
+}
+
 html {
   direction: rtl;
   font-family: 'Heebo', 'Frank Ruhl Libre', sans-serif;

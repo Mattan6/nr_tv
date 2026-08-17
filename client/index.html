@@ -10,6 +10,18 @@
       off. pages/TvDisplay.jsx explains why no override is needed in the first place.
     -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Opt out of the browser's algorithmic dark mode. Android's Chrome and WebView rewrite
+      light pages to dark on their own (Auto Dark Theme / FORCE_DARK) unless the page says it
+      manages its own colours, and the shul's TV had it on: the שבת board's white cards came
+      out near-black while its navy masthead came out bright blue — lightness inverted, hue
+      preserved, which is that feature's exact signature.
+      It only surfaced when the light board shipped, because the transformation skips pages
+      that are already dark and the wall board had always been one. Desktop browsers do not
+      apply it at all, which is why the same page looked right on a computer.
+      Declared here as well as in index.css so it binds before the stylesheet loads.
+    -->
+    <meta name="color-scheme" content="only light" />
     <title>client</title>
   </head>
   <body>
