@@ -10,7 +10,7 @@ const AnnouncementsPanel = ({ ann, annKey }) => (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0, overflow: 'hidden' }}>
       <div
         key={annKey}
-        style={{ animation: 'omFade .7s ease', fontSize: '31px', fontWeight: 600, lineHeight: 1.45, textAlign: 'center', color: '#eef2f7', width: '100%', maxHeight: '100%', minHeight: 0 }}
+        style={{ animation: 'omFade .7s ease', fontSize: '31px', fontWeight: 600, lineHeight: 1.45, textAlign: 'center', color: '#eef2f7', width: '100%', height: '100%', maxHeight: '100%', minHeight: 0 }}
       >
         <RichDoc doc={ann?.doc} text={ann?.text} />
       </div>

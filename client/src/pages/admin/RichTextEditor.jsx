@@ -102,7 +102,12 @@ export default function RichTextEditor({ value, onChange, disabled }) {
       insertNode(ref.current, img);
       emit();
     } catch (err) {
-      setError(err.response?.data?.message || 'העלאת התמונה נכשלה');
+      // The server's `message` is only trustworthy Hebrew on a 400 — that's the
+      // validation path the Hebrew strings in uploads.js were written for. A body over
+      // the 3MB limit is rejected by body-parser with a 413 (and any 500) reaching the
+      // generic handler in app.js, which answers English — matches the same rule in
+      // ItemForm.jsx's submit catch.
+      setError((err.response?.status === 400 && err.response?.data?.message) || 'העלאת התמונה נכשלה');
     } finally {
       setBusy(false);
     }

@@ -323,19 +323,28 @@ from across a hall.
 
 ### The שבת board is deliberately left out
 
-`shabbat/AnnouncementsCard.jsx` is **not** changed. It keeps rendering `ann?.text` with
-`whiteSpace: 'pre-line'`, exactly as it does today.
+This was a real scope decision when the design was approved: `shabbat/AnnouncementsCard.jsx`
+existed at the time, rendering `ann?.text` with `whiteSpace: 'pre-line'`, and the decision
+was to leave it untouched — the weekday board and the phone would gain rich content, the
+שבת board would not.
 
-This is a scope decision, not an oversight, and it has one visible consequence worth
-stating rather than leaving to be discovered. `text` is derived from the doc, so a
-formatted announcement still reads correctly on the שבת board — it only loses its bold and
-its bullets. **An image-only announcement, whose derived `text` is by design the empty
-string, renders there as a blank card.** The practical rule that follows: an announcement
-that is nothing but a picture is a weekday announcement.
+That decision is now moot, overtaken by the board's own change rather than by anything in
+this work: commit `635bef6` ("replace the שבת board's הודעות card with הקדשת הלוח"), merged
+from master while this branch was in flight, deleted `AnnouncementsCard.jsx` outright. The
+שבת board no longer has an announcements card of any kind — `ShabbatDisplay.jsx` says so
+directly, taking "maz, pasuk and ded... and pointedly not azk, joke or ann" off the model.
+There is therefore nothing on that board for rich content to reach, and nothing was excluded
+by this work; the exclusion had already happened, for an unrelated reason, before this
+section became relevant.
 
-Bringing the שבת board in later is one import and one JSX swap, because `RichDoc` takes no
-theme prop — the light card would supply its own colour and size exactly as the dark panel
-does.
+This section is kept — rather than deleted — so a reader comparing this spec to the code
+does not find a bare contradiction: the שבת board really did once render announcements, a
+real choice was made about them here, and that choice was superseded by a later, independent
+redesign rather than silently reversed by this branch.
+
+Bringing the שבת board back into an announcements role later is still one import and one
+JSX addition away from working with rich content, because `RichDoc` takes no theme prop — a
+light card would supply its own colour and size exactly as the dark panel does today.
 
 ## Files
 
@@ -417,9 +426,9 @@ the root `npm test` runs both packages, so the new file needs no configuration.
 2. Within 30 seconds the announcement is on `/` on a desktop-sized window, with the image
    inside the הודעות box and the times untouched around it.
 3. The same announcement on a phone, image at card width.
-4. Force the שבת board and confirm its card is untouched: a formatted announcement shows
-   as plain text there, and an image-only one shows as a blank card — the stated cost of
-   leaving that board out.
+4. Force the שבת board and confirm it renders without error and shows no announcements
+   section anywhere on it — there is no card left for a formatted or image-only
+   announcement to reach.
 5. An announcement written before this change still renders, with its line breaks.
 6. Paste a formatted block from Word into the editor and save — the text survives, the
    formatting does not.

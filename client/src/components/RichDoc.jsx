@@ -43,7 +43,14 @@ const RichDoc = ({ doc, text, imageMaxHeight = '55%' }) => {
         justifyContent: 'center',
         gap: '8px',
         width: '100%',
-        maxHeight: '100%',
+        // An explicit height, not maxHeight: a percentage max-height on the <img> below
+        // only resolves against a *definite* containing-block height — it resolves to
+        // `none` otherwise, silently. This div's own maxHeight:'100%' would leave that
+        // chain auto (its flex-item parent doesn't stretch under align-items:center), so
+        // the image's 55% ceiling would never take effect and a tall photo would blow
+        // through the board's fixed-height box. `alignItems`/`justifyContent: 'center'`
+        // above keep the visual centring the same as when this was maxHeight.
+        height: '100%',
         minHeight: 0,
       }}
     >

@@ -52,20 +52,23 @@ export function domToDoc(root) {
     if (spans.length) blocks.push({ type: 'p', spans });
   };
 
+  // Builds the image block itself but does not decide where it lands — that is
+  // `onImage`'s job below, because the answer differs at the top level (immediately,
+  // in document order) and inside a list (collected, emitted after the list block).
   const image = (node) => {
     const id = node.getAttribute('data-img-id');
     // A picture dragged in from a web page: a src we do not host, with no file of ours
     // behind it. The server would reject it anyway; dropping it here means the gabbai
     // finds out at once rather than at save time.
-    if (!id) return;
-    flushPara();
-    blocks.push({ type: 'img', id, alt: node.getAttribute('alt') || '' });
+    if (!id) return null;
+    return { type: 'img', id, alt: node.getAttribute('alt') || '' };
   };
 
-  // `sink` receives spans and `onBreak` decides what a <br> means here — a new paragraph
-  // at the top level, and nothing at all inside a list item, where a stray break must not
-  // push a paragraph into the middle of the list.
-  const inline = (node, marks, sink, onBreak) => {
+  // `sink` receives spans, `onBreak` decides what a <br> means here — a new paragraph at
+  // the top level, and nothing at all inside a list item, where a stray break must not
+  // push a paragraph into the middle of the list — and `onImage` decides where a found
+  // image block is filed; see the two call sites below.
+  const inline = (node, marks, sink, onBreak, onImage) => {
     if (node.nodeType === TEXT_NODE) {
       if (node.textContent) sink({ text: node.textContent, marks });
       return;
@@ -73,28 +76,39 @@ export function domToDoc(root) {
     if (node.nodeType !== ELEMENT_NODE) return;
 
     if (node.nodeName === 'BR') return onBreak();
-    if (node.nodeName === 'IMG') return image(node);
+    if (node.nodeName === 'IMG') {
+      const img = image(node);
+      if (img) onImage(img);
+      return;
+    }
 
     const mark = MARK_BY_TAG[node.nodeName];
     const next = mark && !marks.includes(mark) ? [...marks, mark] : marks;
     // Everything not in MARK_BY_TAG — a SPAN carrying Word's inline styles, a FONT, an A,
     // a TABLE — is walked for its text and loses its formatting. A whitelist, so the next
     // version of Word cannot introduce a tag we forgot to blacklist.
-    for (const child of node.childNodes) inline(child, next, sink, onBreak);
+    for (const child of node.childNodes) inline(child, next, sink, onBreak, onImage);
   };
 
+  // An image found while walking a list item cannot be pushed into `blocks` the moment
+  // it is seen: the list block itself is only pushed once, at the end, after every item
+  // has been walked. Pushing immediately would emit the image before the list — the
+  // editor's WYSIWYG surface shows it inside the bullet, so the saved doc must agree.
+  // Collected here instead, and flushed after the list block, a few lines down.
   const list = (node, type) => {
     const items = [];
+    const images = [];
     for (const child of node.childNodes) {
       if (child.nodeType !== ELEMENT_NODE || child.nodeName !== 'LI') continue;
       const spans = [];
       for (const grandchild of child.childNodes) {
-        inline(grandchild, [], (span) => spans.push(span), () => {});
+        inline(grandchild, [], (span) => spans.push(span), () => {}, (img) => images.push(img));
       }
       const merged = mergeSpans(spans);
       if (merged.length) items.push(merged);
     }
     if (items.length) blocks.push({ type, items });
+    for (const img of images) blocks.push(img);
   };
 
   const block = (node) => {
@@ -112,7 +126,12 @@ export function domToDoc(root) {
         return;
       }
     }
-    inline(node, [], pushSpan, flushPara);
+    // At the top level an image is pushed the moment it is found — flushing the pending
+    // paragraph first — because `blocks` here is already being built in document order.
+    inline(node, [], pushSpan, flushPara, (img) => {
+      flushPara();
+      blocks.push(img);
+    });
   };
 
   for (const child of root.childNodes) block(child);

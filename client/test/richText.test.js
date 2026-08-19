@@ -129,6 +129,21 @@ test('an image without our id is dropped', () => {
   assert.deepEqual(doc.blocks, [{ type: 'p', spans: [{ text: 'טקסט' }] }]);
 });
 
+// An image inside a bullet is pushed into `blocks` only after the list block that
+// contains it — otherwise the saved doc ([img, ul]) would disagree with what the
+// WYSIWYG surface shows (the image inside the bullet).
+test('an image inside a list item is emitted after the list, not before it', () => {
+  const id = '3f2b1a0c-4d5e-6f70-8192-a3b4c5d6e7f8.jpg';
+  const doc = domToDoc(
+    root([el('UL', [el('LI', [text('פריט'), el('IMG', [], { 'data-img-id': id, alt: 'תמונה' })])])])
+  );
+
+  assert.deepEqual(doc.blocks, [
+    { type: 'ul', items: [[{ text: 'פריט' }]] },
+    { type: 'img', id, alt: 'תמונה' },
+  ]);
+});
+
 test('an empty editor yields a doc with no blocks, which the server calls required', () => {
   assert.deepEqual(domToDoc(root([])).blocks, []);
   assert.deepEqual(domToDoc(root([el('DIV', [el('BR')])])).blocks, []);
