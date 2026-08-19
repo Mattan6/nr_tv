@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { domToDoc, docFromPlainText } from '../src/pages/Admin/richText.js';
+import { domToDoc, docFromPlainText } from '../src/pages/admin/richText.js';
 
 // Fake DOM nodes. domToDoc reads only these five properties, which is the whole reason
 // this file needs no jsdom.
@@ -81,6 +81,12 @@ test('empty paragraphs are collapsed away', () => {
     { type: 'p', spans: [{ text: 'א' }] },
     { type: 'p', spans: [{ text: 'ב' }] },
   ]);
+});
+
+test('a nested block element does not produce a spurious empty paragraph', () => {
+  const doc = domToDoc(root([el('DIV', [el('DIV', [text('a')])])]));
+
+  assert.deepEqual(doc.blocks, [{ type: 'p', spans: [{ text: 'a' }] }]);
 });
 
 test('lists become list blocks and keep their marks', () => {
