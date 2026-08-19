@@ -17,8 +17,12 @@ export const PANEL_META = {
     icon: '📢',
     addLabel: 'הוסף הודעה',
     emptyLabel: 'אין הודעות',
-    fields: [{ key: 'text', label: 'תוכן ההודעה', type: 'textarea', required: true }],
-    summary: (item) => item.text,
+    // The field key is `doc`, which is also the key the server reports errors under —
+    // see the rich branch of validateItem in server/src/store/panels.js.
+    fields: [{ key: 'doc', label: 'תוכן ההודעה', type: 'rich', required: true }],
+    // An announcement that is only a picture has no derived text; without the fallback
+    // the list would show it as a blank row.
+    summary: (item) => item.text || '🖼 תמונה',
     sub: () => '',
   },
   // Two שיעורים panels, distinguished by their titles rather than by a field inside one

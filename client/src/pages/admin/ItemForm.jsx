@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getPanel, createItem, updateItem } from '../../services/content';
 import { PANEL_META } from './panelMeta';
+import RichTextEditor from './RichTextEditor';
+import { docFromPlainText, emptyDoc } from './richText';
 import * as S from './adminStyles';
 
 const blankValues = (meta) =>
-  Object.fromEntries((meta?.fields || []).map((field) => [field.key, '']));
+  Object.fromEntries((meta?.fields || []).map((field) => [field.key, field.type === 'rich' ? emptyDoc() : '']));
 
 export default function ItemForm() {
   const { panel, id } = useParams();
@@ -46,7 +48,16 @@ export default function ItemForm() {
           return;
         }
         setItem(found);
-        setValues(Object.fromEntries(meta.fields.map((f) => [f.key, found[f.key] || ''])));
+        setValues(
+          Object.fromEntries(
+            meta.fields.map((f) => [
+              f.key,
+              // A legacy announcement has no doc. Converting it here is the whole
+              // migration: the next save stores it as one.
+              f.type === 'rich' ? found.doc || docFromPlainText(found.text) : found[f.key] || '',
+            ])
+          )
+        );
       })
       .catch(() => setMessage('לא ניתן לטעון את הפריט'))
       .finally(() => setLoading(false));
@@ -106,11 +117,20 @@ export default function ItemForm() {
       <form onSubmit={submit}>
         {meta.fields.map((field) => (
           <div key={field.key} style={{ marginBottom: '16px' }}>
-            <label style={S.label} htmlFor={field.key}>
+            <label style={S.label} htmlFor={field.type === 'rich' ? undefined : field.key}>
               {field.label}
               {!field.required && ' (לא חובה)'}
             </label>
-            {field.type === 'textarea' ? (
+            {field.type === 'rich' ? (
+              <RichTextEditor
+                // Remounts when the fetched item arrives, which is how the editor loads a
+                // document exactly once instead of on every keystroke.
+                key={item?.id || 'new'}
+                value={values[field.key]}
+                onChange={(doc) => setField(field.key, doc)}
+                disabled={disabled}
+              />
+            ) : field.type === 'textarea' ? (
               <textarea
                 id={field.key}
                 value={values[field.key]}
