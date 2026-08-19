@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Give the gabbai a small WYSIWYG editor for הודעות — bold, italic, underline, lists and uploaded images — and teach the three surfaces that draw announcements to render it.
+**Goal:** Give the gabbai a small WYSIWYG editor for הודעות — bold, italic, underline, lists and uploaded images — and teach the weekday board and the phone to render it. The שבת board is explicitly out of scope and must not be touched.
 
 **Architecture:** An announcement gains an optional `doc`: a closed JSON model of blocks and spans, validated on the server, rendered as React elements. No HTML is ever stored and nothing renders with `dangerouslySetInnerHTML`. Images are uploaded as raw bytes to `/api/uploads`, stored on the Railway volume beside `content.json`, and referenced from a doc by a server-assigned file id rather than by URL.
 
@@ -12,6 +12,7 @@
 
 ## Global Constraints
 
+- **The שבת board is out of scope.** `client/src/components/shabbat/AnnouncementsCard.jsx` must not be modified by any task. Rich content reaches the weekday board (`display/AnnouncementsPanel.jsx`) and the phone (`mobile/RotatingCards.jsx`) only.
 - **Zero new npm packages.** Not in `client/package.json`, not in `server/package.json`. If a task seems to need one, stop and raise it — the design rejected an editor library on exactly this ground.
 - **Server is CommonJS** (`require`/`module.exports`), **client is ESM** (`import`/`export`). Do not mix.
 - **No Tailwind.** It is non-functional in this repo (v3 directives against a v4 install). Use inline styles, as every existing component does. See the comment at the top of `client/src/pages/Admin/adminStyles.js`.
@@ -1405,17 +1406,19 @@ EOF
 
 ---
 
-### Task 6: The renderer, and the three surfaces that draw an announcement
+### Task 6: The renderer, and the two surfaces that draw an announcement
 
-After this task a doc saved with `curl` renders on the wall, on the שבת board and on the phone — before any editor exists to write one.
+After this task a doc saved with `curl` renders on the weekday wall board and on the phone — before any editor exists to write one.
 
 **Files:**
 - Create: `client/src/components/RichDoc.jsx`
-- Modify: `client/src/components/display/AnnouncementsPanel.jsx`, `client/src/pages/SynagogueDisplay.jsx:98`, `client/src/components/shabbat/AnnouncementsCard.jsx`, `client/src/components/mobile/RotatingCards.jsx`, `client/src/pages/MobileDisplay.jsx:45`
+- Modify: `client/src/components/display/AnnouncementsPanel.jsx`, `client/src/pages/SynagogueDisplay.jsx:98`, `client/src/components/mobile/RotatingCards.jsx`, `client/src/pages/MobileDisplay.jsx:45`
+- **Must not touch:** `client/src/components/shabbat/AnnouncementsCard.jsx` — see Step 3
 
 **Interfaces:**
 - Consumes: the doc shape from Task 1.
 - Produces: `<RichDoc doc={item?.doc} text={item?.text} imageMaxHeight="55%" />`. `imageMaxHeight` defaults to `'55%'`; pass `'none'` where the container has no fixed height.
+- Out of scope: the שבת board. `RichDoc` is written to need no theme prop anyway, so adding that board later is one import and one JSX swap — but do not add it now.
 
 - [ ] **Step 1: Create the renderer**
 
@@ -1424,13 +1427,17 @@ Create `client/src/components/RichDoc.jsx`:
 ```jsx
 import { Fragment } from 'react';
 
-// The one renderer for an announcement's rich document: the dark board, the שבת board,
-// the phone and the admin's preview all draw through this. The admin preview using the
-// display's own component — rather than a lookalike — is what makes it trustworthy.
+// The one renderer for an announcement's rich document: the weekday board, the phone and
+// the admin's preview all draw through this. The admin preview using the display's own
+// component — rather than a lookalike — is what makes it trustworthy.
+//
+// The שבת board deliberately does not use it and keeps its own plain-text render; see the
+// spec. That it could, unchanged, follows from the next paragraph.
 //
 // It takes no colour and no size from the data. The surface around it owns typography,
-// which is why the same component sits on a dark panel and on a light card with no theme
-// prop, and why the gabbai cannot make the text unreadable from the back of the hall.
+// which is why the same component sits on a dark panel, in a phone card and inside a
+// scaled preview with no theme prop — and why the gabbai cannot make the text unreadable
+// from the back of the hall.
 
 const IMAGE_BASE = '/api/uploads/';
 
@@ -1545,42 +1552,18 @@ In `client/src/pages/SynagogueDisplay.jsx`, line 98:
 <AnnouncementsPanel ann={ann} annKey={tick} />
 ```
 
-- [ ] **Step 3: Wire the שבת board**
+- [ ] **Step 3: Leave the שבת board alone**
 
-In `client/src/components/shabbat/AnnouncementsCard.jsx`, add the import:
+Nothing to do — this step exists so its absence is not read as an omission.
 
-```jsx
-import RichDoc from '../RichDoc';
-```
+`client/src/components/shabbat/AnnouncementsCard.jsx` is **out of scope** and must not be
+touched. It keeps rendering `ann?.text` with its own `whiteSpace: 'pre-line'`, and it keeps
+receiving the item as it already does. Do not add the `RichDoc` import there.
 
-and replace the inner text `div` — dropping `whiteSpace: 'pre-line'`, which now lives inside `RichDoc`'s fallback:
-
-```jsx
-      <div
-        key={rotationKey}
-        style={{
-          animation: 'omFade .8s ease',
-          fontSize: '25px',
-          fontWeight: 600,
-          lineHeight: 1.45,
-          textAlign: 'center',
-          color: C.ink,
-          textWrap: 'pretty',
-          width: '100%',
-          maxHeight: '100%',
-          minHeight: 0,
-        }}
-      >
-        <RichDoc doc={ann?.doc} text={ann?.text} />
-      </div>
-```
-
-Update the comment above the component, which currently explains the `pre-line` that is being removed:
-
-```jsx
-// The text is drawn by RichDoc, shared with the dark board and the phone: a rich document
-// when the gabbai wrote one, and the plain text with its own line breaks when he did not.
-```
+`text` is derived from the doc, so a formatted announcement still reads correctly on that
+board minus its bold and bullets. An image-only announcement, whose derived text is by
+design empty, shows there as a blank card. Both are the accepted cost of the scope
+decision — see "The שבת board is deliberately left out" in the spec.
 
 - [ ] **Step 4: Wire the phone**
 
@@ -1635,14 +1618,19 @@ Check:
 - [ ] **Step 6: Commit**
 
 ```bash
-git add client/src/components/RichDoc.jsx client/src/components/display/AnnouncementsPanel.jsx client/src/components/shabbat/AnnouncementsCard.jsx client/src/components/mobile/RotatingCards.jsx client/src/pages/SynagogueDisplay.jsx client/src/pages/MobileDisplay.jsx
+git add client/src/components/RichDoc.jsx client/src/components/display/AnnouncementsPanel.jsx client/src/components/mobile/RotatingCards.jsx client/src/pages/SynagogueDisplay.jsx client/src/pages/MobileDisplay.jsx
 git commit -F - <<'EOF'
-feat: draw an announcement's rich document on all three surfaces
+feat: draw an announcement's rich document on the weekday board and the phone
 
-One renderer, shared by the dark board, the Shabbat board and the phone. It
-takes no colour and no size from the data — the surface around it owns
-typography — which is why the same component works on a dark panel and a light
-card with no theme prop, and why the gabbai cannot make the wall unreadable.
+One renderer, shared by both and by the admin's preview. It takes no colour and
+no size from the data — the surface around it owns typography — which is why the
+same component works on a dark panel, in a phone card and inside a scaled
+preview with no theme prop, and why the gabbai cannot make the wall unreadable.
+
+The Shabbat board is deliberately left on its plain-text render. A formatted
+announcement still reads correctly there, because `text` is derived from the
+doc; an image-only one shows as a blank card, which the spec states as the
+accepted cost.
 
 An image gets a ceiling of 55% of the box height, so a picture shrinks rather
 than pushing the text out of a box whose height the board's grid has fixed.
@@ -2193,7 +2181,7 @@ Checked against the spec, section by section:
 - **Document model** → Task 1 (validator, limits, id whitelist, derived text) and Task 2 (schema wiring, `doc: null` on the legacy path).
 - **Image pipeline** → Task 7 (client downscale and re-encode), Task 3 (raw transport, magic bytes, serving headers, caps), Task 4 (orphan sweep and its age guard).
 - **Editor** → Task 5 (walker, whitelist, `docToNodes` without `innerHTML`), Task 8 (toolbar, paste, image insertion, preview).
-- **Display** → Task 6 (shared renderer, image ceiling, three call sites).
+- **Display** → Task 6 (shared renderer, image ceiling, two call sites, and the שבת board explicitly left alone).
 - **Testing** → Tasks 1–5 carry the suites the spec's Verification section lists; Tasks 6, 8 and 9 carry its by-hand checks.
 - **Auth restatement and DEPLOY.md** → Task 9, plus the comment at the top of `routes/uploads.js` in Task 3.
 

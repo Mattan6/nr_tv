@@ -58,7 +58,7 @@ Six units, each with one responsibility:
 | Upload routes | `server/src/routes/uploads.js` | Accept one image, serve them all |
 | DOM ↔ doc walker | `client/src/pages/Admin/richText.js` | Pure functions between the editor's DOM and the doc |
 | Editor | `client/src/pages/Admin/RichTextEditor.jsx` | The toolbar and the editing surface |
-| Renderer | `client/src/components/RichDoc.jsx` | Draw a doc — on all three surfaces and in the preview |
+| Renderer | `client/src/components/RichDoc.jsx` | Draw a doc — on the dark board, on the phone, and in the preview |
 
 The renderer is shared on purpose. The admin's preview is not a lookalike of the board; it
 is the board's own component on the board's own background, scaled down.
@@ -303,22 +303,37 @@ That single fallback is the entire backward-compatibility story on the display s
 
 The renderer takes no colour and no size from the data — the surrounding surface supplies
 them, per the minimal-formatting decision, which is why the same component works on the
-dark board and on the light שבת board without a theme prop.
+dark board, on the phone card and inside the admin's preview without a theme prop.
 
 Inside the box: `overflow: hidden`, and an image gets `objectFit: 'contain'` with a ceiling
 of **55% of the box height**. An image that would otherwise push the text out of a fixed
 box shrinks instead.
 
-Three call sites, two of which are handed a string today and must be handed the item:
+Two call sites, both handed a string today and both to be handed the item:
 
 | File | Today | After |
 |---|---|---|
 | `display/AnnouncementsPanel.jsx` | receives a string (`ann?.text \|\| ''`) | receives the item |
-| `shabbat/AnnouncementsCard.jsx` | receives the item | signature unchanged |
 | `mobile/RotatingCards.jsx` | receives a string | receives the item |
 
 On the phone the image may run the full card width; it is read from thirty centimetres, not
 from across a hall.
+
+### The שבת board is deliberately left out
+
+`shabbat/AnnouncementsCard.jsx` is **not** changed. It keeps rendering `ann?.text` with
+`whiteSpace: 'pre-line'`, exactly as it does today.
+
+This is a scope decision, not an oversight, and it has one visible consequence worth
+stating rather than leaving to be discovered. `text` is derived from the doc, so a
+formatted announcement still reads correctly on the שבת board — it only loses its bold and
+its bullets. **An image-only announcement, whose derived `text` is by design the empty
+string, renders there as a blank card.** The practical rule that follows: an announcement
+that is nothing but a picture is a weekday announcement.
+
+Bringing the שבת board in later is one import and one JSX swap, because `RichDoc` takes no
+theme prop — the light card would supply its own colour and size exactly as the dark panel
+does.
 
 ## Files
 
@@ -350,7 +365,6 @@ from across a hall.
 | `client/src/pages/SynagogueDisplay.jsx` | pass the item |
 | `client/src/pages/MobileDisplay.jsx` | pass the item |
 | `client/src/components/display/AnnouncementsPanel.jsx` | render `RichDoc` |
-| `client/src/components/shabbat/AnnouncementsCard.jsx` | render `RichDoc` |
 | `client/src/components/mobile/RotatingCards.jsx` | render `RichDoc` |
 | `DEPLOY.md` | backup and volume notes below |
 
@@ -401,7 +415,9 @@ the root `npm test` runs both packages, so the new file needs no configuration.
 2. Within 30 seconds the announcement is on `/` on a desktop-sized window, with the image
    inside the הודעות box and the times untouched around it.
 3. The same announcement on a phone, image at card width.
-4. Force the שבת board and confirm the light card renders the same doc.
+4. Force the שבת board and confirm its card is untouched: a formatted announcement shows
+   as plain text there, and an image-only one shows as a blank card — the stated cost of
+   leaving that board out.
 5. An announcement written before this change still renders, with its line breaks.
 6. Paste a formatted block from Word into the editor and save — the text survives, the
    formatting does not.
