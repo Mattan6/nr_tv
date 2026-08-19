@@ -10,6 +10,7 @@ const UPLOAD_DIR = path.join(CONTENT_DIR, 'uploads');
 const MAX_BYTES = 3 * 1024 * 1024;
 const MAX_FILES = 100;
 const MAX_DIR_BYTES = 50 * 1024 * 1024;
+const ORPHAN_AGE_MS = 24 * 60 * 60 * 1000;
 
 class UploadError extends Error {}
 
@@ -67,4 +68,41 @@ async function saveImage(buffer) {
   return id;
 }
 
-module.exports = { UPLOAD_DIR, MAX_BYTES, MAX_FILES, MAX_DIR_BYTES, UploadError, detectType, listFiles, saveImage };
+// Deletes image files that no announcement references.
+//
+// The age guard is the whole trick, not a refinement of it. An image is uploaded the
+// moment the gabbai picks it, and the announcement that references it is not saved until
+// he finishes typing — so without the guard the very next write from any panel would
+// delete the picture out from under him.
+//
+// `now` is a parameter so the guard is testable without touching the clock.
+async function sweepOrphans(doc, now = Date.now()) {
+  const referenced = new Set();
+  for (const item of doc?.announcements || []) {
+    for (const block of item?.doc?.blocks || []) {
+      if (block.type === 'img') referenced.add(block.id);
+    }
+  }
+
+  let removed = 0;
+  for (const file of await listFiles()) {
+    if (referenced.has(file.name)) continue;
+    if (now - file.mtimeMs < ORPHAN_AGE_MS) continue;
+    await fs.rm(path.join(UPLOAD_DIR, file.name), { force: true });
+    removed += 1;
+  }
+  return removed;
+}
+
+module.exports = {
+  UPLOAD_DIR,
+  MAX_BYTES,
+  MAX_FILES,
+  MAX_DIR_BYTES,
+  ORPHAN_AGE_MS,
+  UploadError,
+  detectType,
+  listFiles,
+  saveImage,
+  sweepOrphans,
+};

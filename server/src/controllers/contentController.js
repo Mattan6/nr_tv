@@ -1,6 +1,7 @@
 const { randomUUID } = require('node:crypto');
 const { contentStore, NotFoundError } = require('../store/contentStore');
 const { isPanel, validateItem, validateSettings, MAX_ITEMS } = require('../store/panels');
+const { sweepOrphans } = require('../store/uploads');
 
 // One controller for all four panels — they differ only in their fields, and
 // store/panels.js already describes that difference.
@@ -28,6 +29,18 @@ const handler = (fn) => async (req, res, next) => {
   }
 };
 
+// Runs after a successful write — on any panel rather than only on announcements, which
+// is one code path instead of a condition to get wrong, over a directory holding tens of
+// files. Awaited rather than fired and forgotten so it is deterministic under test, and
+// wrapped so a stale file can never turn a saved announcement into a 500.
+async function sweep() {
+  try {
+    await sweepOrphans(await contentStore.read());
+  } catch (err) {
+    console.error(`⚠️  Could not sweep orphaned uploads: ${err.message}`);
+  }
+}
+
 const getContent = handler(async (req, res) => {
   res.json(await contentStore.read());
 });
@@ -48,6 +61,7 @@ const createItem = handler(async (req, res) => {
     draft[panel].push(item);
     return item;
   });
+  await sweep();
   res.status(201).json(created);
 });
 
@@ -65,6 +79,7 @@ const updateItem = handler(async (req, res) => {
     if (typeof req.body.isActive === 'boolean') item.isActive = req.body.isActive;
     return item;
   });
+  await sweep();
   res.json(updated);
 });
 
@@ -76,6 +91,7 @@ const deleteItem = handler(async (req, res) => {
     if (index === -1) throw new NotFoundError(id);
     draft[panel].splice(index, 1);
   });
+  await sweep();
   res.json({ message: 'הפריט נמחק' });
 });
 

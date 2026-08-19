@@ -91,6 +91,39 @@ test('detectType recognises exactly two formats', () => {
   assert.strictEqual(detectType(Buffer.alloc(2)), null);
 });
 
+test('the sweep deletes an unreferenced old file and spares a fresh one', async () => {
+  const { UPLOAD_DIR, ORPHAN_AGE_MS, sweepOrphans } = require('../src/store/uploads');
+  await fs.mkdir(UPLOAD_DIR, { recursive: true });
+
+  const old = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg';
+  const fresh = 'bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee.jpg';
+  const kept = 'cccccccc-bbbb-cccc-dddd-eeeeeeeeeeee.jpg';
+  for (const name of [old, fresh, kept]) {
+    await fs.writeFile(path.join(UPLOAD_DIR, name), JPEG);
+  }
+
+  // `old` and `kept` are aged past the guard; `fresh` is not. `kept` is referenced.
+  const past = new Date(Date.now() - ORPHAN_AGE_MS - 60_000);
+  await fs.utimes(path.join(UPLOAD_DIR, old), past, past);
+  await fs.utimes(path.join(UPLOAD_DIR, kept), past, past);
+
+  const doc = { announcements: [{ id: 'a', doc: { blocks: [{ type: 'img', id: kept }] } }] };
+  const removed = await sweepOrphans(doc);
+
+  const names = (await fs.readdir(UPLOAD_DIR));
+  assert.strictEqual(removed, 1);
+  assert.ok(!names.includes(old), 'an aged, unreferenced file should be gone');
+  assert.ok(names.includes(fresh), 'a file uploaded seconds ago must survive — its announcement is still being typed');
+  assert.ok(names.includes(kept), 'a referenced file must survive regardless of age');
+});
+
+test('the sweep tolerates announcements with no doc at all', async () => {
+  const { sweepOrphans } = require('../src/store/uploads');
+
+  await assert.doesNotReject(() => sweepOrphans({ announcements: [{ id: 'a', text: 'ישן' }] }));
+  await assert.doesNotReject(() => sweepOrphans({}));
+});
+
 // Placed last deliberately: it fills the directory to the cap, which would break any
 // earlier test that expects an upload to succeed.
 test('uploads stop once the file-count cap is reached', async () => {
