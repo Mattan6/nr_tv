@@ -4,8 +4,9 @@
 **Status:** Approved — fully shipped. Implemented by
 `docs/superpowers/plans/2026-08-19-rich-announcements.md`.
 **Scope:** The `announcements` panel only. The gabbai gets a small WYSIWYG editor in
-`/adminGabbai` — bold, italic, underline, lists, and an uploaded image — and the three
-surfaces that render הודעות learn to draw it.
+`/adminGabbai` — bold, italic, underline, lists, and an uploaded image — and the weekday
+board and the phone learn to draw it. The שבת board is deliberately left out; see
+"The שבת board is deliberately left out".
 
 ## What this is
 
@@ -40,8 +41,8 @@ Four choices were made up front and the whole design follows from them:
 The obvious move is an editor library, and it was rejected deliberately.
 
 A library brings correct selection handling, undo and paste cleanup — and five to fifteen
-packages, a much larger bundle, and stored HTML. Stored HTML means every one of the three
-display surfaces renders with `dangerouslySetInnerHTML`, which means the wall's safety
+packages, a much larger bundle, and stored HTML. Stored HTML means every display surface
+renders with `dangerouslySetInnerHTML`, which means the wall's safety
 rests forever on a sanitizer being configured correctly. For bold, italic and a list, that
 is a permanent liability bought for a temporary convenience.
 
@@ -57,8 +58,8 @@ Six units, each with one responsibility:
 | Document validator | `server/src/store/richText.js` | Decide whether a doc is legal; derive its plain text |
 | Upload store | `server/src/store/uploads.js` | The only module that writes image files |
 | Upload routes | `server/src/routes/uploads.js` | Accept one image, serve them all |
-| DOM ↔ doc walker | `client/src/pages/Admin/richText.js` | Pure functions between the editor's DOM and the doc |
-| Editor | `client/src/pages/Admin/RichTextEditor.jsx` | The toolbar and the editing surface |
+| DOM ↔ doc walker | `client/src/pages/admin/richText.js` | Pure functions between the editor's DOM and the doc |
+| Editor | `client/src/pages/admin/RichTextEditor.jsx` | The toolbar and the editing surface |
 | Renderer | `client/src/components/RichDoc.jsx` | Draw a doc — on the dark board, on the phone, and in the preview |
 
 The renderer is shared on purpose. The admin's preview is not a lookalike of the board; it
@@ -346,8 +347,8 @@ does.
 | `server/src/store/uploads.js` | dir resolution, magic bytes, write, caps, sweep |
 | `server/src/routes/uploads.js` | `POST /`, and `express.static` for GET |
 | `client/src/services/uploads.js` | canvas downscale, re-encode, POST |
-| `client/src/pages/Admin/richText.js` | `domToDoc`, `docToNodes`, `docFromPlainText`, `emptyDoc` |
-| `client/src/pages/Admin/RichTextEditor.jsx` | toolbar, surface, preview |
+| `client/src/pages/admin/richText.js` | `domToDoc`, `docToNodes`, `docFromPlainText`, `emptyDoc` |
+| `client/src/pages/admin/RichTextEditor.jsx` | toolbar, surface, preview |
 | `client/src/components/RichDoc.jsx` | the shared renderer |
 | `server/test/richText.test.js` | the validator, against the limits and the id whitelist |
 | `server/test/uploads.test.js` | magic bytes, caps, serving headers, the sweep's age guard |
