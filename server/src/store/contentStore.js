@@ -156,4 +156,8 @@ module.exports = {
   createContentStore,
   contentStore: createContentStore(defaultDir),
   NotFoundError,
+  // Exported so store/uploads.js writes images beside content.json rather than deriving
+  // the path a second time — and so the tests' trick of pointing CONTENT_DIR at a temp
+  // directory before `require` covers uploads too.
+  CONTENT_DIR: defaultDir,
 };

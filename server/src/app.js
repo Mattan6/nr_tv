@@ -8,6 +8,7 @@ const announcementRoutes = require('./routes/announcements');
 const eventRoutes = require('./routes/events');
 const settingsRoutes = require('./routes/settings');
 const contentRoutes = require('./routes/content');
+const uploadRoutes = require('./routes/uploads');
 
 const app = express();
 
@@ -20,6 +21,12 @@ app.use('/api/announcements', announcementRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/content', contentRoutes);
+// Under /api, and deliberately not under /uploads: Vite's dev proxy forwards only /api,
+// and the SPA fallback below answers every non-/api GET with index.html — so at /uploads
+// the TV would get HTML where it expected a JPEG. Not under /api/content/uploads either,
+// where router.post('/:panel') already lives and correctness would depend on declaration
+// order, the trap the /settings comment in routes/content.js warns about.
+app.use('/api/uploads', uploadRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
