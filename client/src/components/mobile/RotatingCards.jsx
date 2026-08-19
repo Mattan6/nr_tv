@@ -43,7 +43,12 @@ export const AnnouncementCard = ({ ann, annKey, count, index }) => (
           marginTop: '3px',
         }}
       >
-        <RichDoc doc={ann?.doc} text={ann?.text} imageMaxHeight="none" />
+        {/* A viewport unit, not a percentage: this card has no definite height, and a
+            percentage max-height resolves to `none` against an indefinite containing block —
+            which is what "none" amounted to here, letting a portrait photo run ~440px tall and
+            turn the card into a poster with a caption. The phone is read from thirty
+            centimetres, so a third of the screen is already generous. */}
+        <RichDoc doc={ann?.doc} text={ann?.text} imageMaxHeight="40vh" />
       </div>
     </div>
 

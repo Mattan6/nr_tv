@@ -26,7 +26,15 @@ const renderSpans = (spans) =>
     return <Fragment key={index}>{node}</Fragment>;
   });
 
-const RichDoc = ({ doc, text, imageMaxHeight = '55%' }) => {
+// The default is a ceiling for the board, whose הודעות box is a fixed ~143px of content —
+// so a picture there is at best a legible thumbnail beside the text, never a מודעה readable
+// from the back of the hall. Enlarging it past this needs the board's grid to change, which
+// the feature's scope deliberately excludes.
+//
+// A caller whose container has NO definite height must pass an absolute or viewport unit
+// instead of relying on this: a percentage max-height resolves to `none` against an
+// indefinite containing block, silently removing the ceiling. See mobile/RotatingCards.jsx.
+const RichDoc = ({ doc, text, imageMaxHeight = '100%' }) => {
   // No doc — an announcement written before rich content existed, or one whose rich
   // content was cleared by a legacy write. Rendered exactly as it always was; this line
   // is the whole backward-compatibility story on the display side.
@@ -63,6 +71,12 @@ const RichDoc = ({ doc, text, imageMaxHeight = '55%' }) => {
               alt={block.alt || ''}
               // The ceiling is what keeps a picture from pushing the text out of a box
               // whose height is fixed by the board's grid: the image shrinks instead.
+              //
+              // At the board's 100% default that ceiling alone would let an image claim the
+              // whole box and leave an announcement's text with nothing. It does not, because
+              // this is a flex item with `minHeight: 0` in the column above: flex-shrink gives
+              // the text the room it needs first and the picture takes what is left. The
+              // ceiling caps an image-only announcement; the flex layout handles the rest.
               style={{
                 maxWidth: '100%',
                 maxHeight: imageMaxHeight,
