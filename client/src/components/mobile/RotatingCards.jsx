@@ -1,4 +1,5 @@
 import * as S from './mobileStyles';
+import RichDoc from '../RichDoc';
 
 // The four cards whose contents change on a timer, phone-sized siblings of
 // display/AnnouncementsPanel.jsx and display/CenterCards.jsx. Each takes the rotation
@@ -40,10 +41,9 @@ export const AnnouncementCard = ({ ann, annKey, count, index }) => (
           lineHeight: 1.4,
           color: S.COLORS.textBright,
           marginTop: '3px',
-          whiteSpace: 'pre-line',
         }}
       >
-        {ann}
+        <RichDoc doc={ann?.doc} text={ann?.text} imageMaxHeight="none" />
       </div>
     </div>
 

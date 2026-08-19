@@ -42,7 +42,7 @@ const MobileDisplay = () => {
         <NextMinyanHero next={next} zmanimRows={zmanimRows} />
 
         {annCount > 0 && (
-          <AnnouncementCard ann={ann?.text || ''} annKey={tick} count={annCount} index={annIndex} />
+          <AnnouncementCard ann={ann} annKey={tick} count={annCount} index={annIndex} />
         )}
 
         <PrayerTimesCard

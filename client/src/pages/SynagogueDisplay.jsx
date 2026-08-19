@@ -100,7 +100,7 @@ const SynagogueDisplay = ({ safeArea = { x: 0, y: 0 }, showToggle = true }) => {
 
             {/* Center */}
             <div style={{ display: 'grid', gridTemplateRows: '1.02fr 0.98fr 1fr', gap: '20px', minHeight: 0 }}>
-              <AnnouncementsPanel ann={ann?.text || ''} annKey={tick} />
+              <AnnouncementsPanel ann={ann} annKey={tick} />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', minHeight: 0 }}>
                 <NextMinyanPanel next={next} />
                 <JokesPanel joke={joke} jokeKey={jokeTick} />
