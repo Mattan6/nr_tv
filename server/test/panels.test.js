@@ -171,3 +171,49 @@ test('strips keys outside the shabbat schema', () => {
   assert.strictEqual(result.errors, undefined);
   assert.strictEqual(result.settings.shabbat.injected, undefined);
 });
+
+// --- Rich הודעות ------------------------------------------------------------------
+
+const RICH_ID = '3f2b1a0c-4d5e-6f70-8192-a3b4c5d6e7f8.jpg';
+
+test('a doc on the announcements panel becomes the source of truth for text', () => {
+  const { fields, errors } = validateItem('announcements', {
+    text: 'טקסט שהלקוח שלח ואין לסמוך עליו',
+    doc: { blocks: [{ type: 'p', spans: [{ text: 'מה שנשמר באמת' }] }] },
+  });
+
+  assert.strictEqual(errors, undefined);
+  assert.strictEqual(fields.text, 'מה שנשמר באמת');
+  assert.strictEqual(fields.doc.blocks.length, 1);
+});
+
+// Without this, Object.assign in updateItem would leave the old rich content in place
+// while `text` said something else — and every renderer prefers `doc`.
+test('a write with no doc clears any doc the item already had', () => {
+  const { fields } = validateItem('announcements', { text: 'הודעה פשוטה' });
+
+  assert.strictEqual(fields.text, 'הודעה פשוטה');
+  assert.strictEqual(fields.doc, null);
+});
+
+test('an invalid doc reports under the doc key, which is the form field', () => {
+  const { errors } = validateItem('announcements', { doc: { blocks: [{ type: 'iframe' }] } });
+
+  assert.ok(errors.doc);
+});
+
+test('only announcements take a doc — the other panels ignore it', () => {
+  const { fields } = validateItem('ticker', { text: 'שורה', doc: { blocks: [] } });
+
+  assert.strictEqual(fields.doc, undefined);
+  assert.strictEqual(fields.text, 'שורה');
+});
+
+test('an image-only doc saves, even though its derived text is empty', () => {
+  const { fields, errors } = validateItem('announcements', {
+    doc: { blocks: [{ type: 'img', id: RICH_ID, alt: '' }] },
+  });
+
+  assert.strictEqual(errors, undefined);
+  assert.strictEqual(fields.text, '');
+});

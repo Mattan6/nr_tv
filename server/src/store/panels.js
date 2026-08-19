@@ -3,6 +3,8 @@
 // rather than as one set of near-identical handlers per panel — is what lets one
 // controller and one pair of React screens serve all of them, and is why adding
 // הקדשת הלוח below was a schema entry rather than a route.
+const { validateDoc } = require('./richText');
+
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const MAX_LEN = 300;
 
@@ -72,6 +74,16 @@ const isPanel = (panel) => Object.prototype.hasOwnProperty.call(PANELS, panel);
 // Returns { fields } or { errors }, never both. `fields` contains only schema keys,
 // so a client cannot inject an id, an isActive, or anything else by sending it.
 function validateItem(panel, body) {
+  // הודעות may carry a rich document instead of a flat string. When one is present it is
+  // the source of truth and `text` is derived from it (store/richText.js), so whatever
+  // `text` the client also sent is ignored and the plain-field loop below is skipped.
+  if (panel === 'announcements' && body != null && body.doc != null) {
+    const { doc, text, error } = validateDoc(body.doc);
+    // Reported under `doc`, which is the field key the admin form uses — see panelMeta.js.
+    if (error) return { errors: { doc: error } };
+    return { fields: { doc, text } };
+  }
+
   const schema = PANELS[panel];
   const fields = {};
   const errors = {};
@@ -96,7 +108,14 @@ function validateItem(panel, body) {
     fields[key] = value;
   }
 
-  return Object.keys(errors).length ? { errors } : { fields };
+  if (Object.keys(errors).length) return { errors };
+
+  // A write that carries no doc clears any doc the item already had. Without this,
+  // Object.assign in updateItem would leave the old rich content in place while `text`
+  // said something else — and every renderer prefers `doc`.
+  if (panel === 'announcements') fields.doc = null;
+
+  return { fields };
 }
 
 // The five שבת rows the gabbai may pin to a fixed time. Blank means "leave it

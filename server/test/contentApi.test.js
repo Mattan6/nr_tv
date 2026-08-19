@@ -134,6 +134,51 @@ test('writes survive in content.json', async () => {
   assert.ok(written.shiurim.some((it) => it.name === 'שיעור נוסף'));
 });
 
+// --- Rich הודעות ------------------------------------------------------------------
+
+test('POST an announcement with a doc returns the derived text', async () => {
+  const res = await send('POST', `${base}/announcements`, {
+    doc: { blocks: [{ type: 'p', spans: [{ text: 'שיעור ' }, { text: 'הערב', marks: ['b'] }] }] },
+  });
+  const created = await res.json();
+
+  assert.strictEqual(res.status, 201);
+  assert.strictEqual(created.text, 'שיעור הערב');
+  assert.deepStrictEqual(created.doc.blocks[0].spans[1].marks, ['b']);
+});
+
+test('a legacy POST carrying only text still works', async () => {
+  const res = await send('POST', `${base}/announcements`, { text: 'הודעה ישנה' });
+  const created = await res.json();
+
+  assert.strictEqual(res.status, 201);
+  assert.strictEqual(created.text, 'הודעה ישנה');
+  assert.strictEqual(created.doc, null);
+});
+
+test('a legacy PUT over a rich item clears its doc', async () => {
+  const created = await (await send('POST', `${base}/announcements`, {
+    doc: { blocks: [{ type: 'p', spans: [{ text: 'עשיר' }] }] },
+  })).json();
+
+  const updated = await (await send('PUT', `${base}/announcements/${created.id}`, {
+    text: 'פשוט',
+  })).json();
+
+  assert.strictEqual(updated.text, 'פשוט');
+  assert.strictEqual(updated.doc, null, 'a stale doc would keep winning at render time');
+});
+
+test('a doc naming an image we never wrote is a 400 in Hebrew', async () => {
+  const res = await send('POST', `${base}/announcements`, {
+    doc: { blocks: [{ type: 'img', id: 'https://example.com/track.gif' }] },
+  });
+  const body = await res.json();
+
+  assert.strictEqual(res.status, 400);
+  assert.ok(body.errors.doc);
+});
+
 // Placed last deliberately: it fills a panel to MAX_ITEMS, which would break any
 // later test that expects to create in the same panel.
 test('POST refuses to add to a panel already at MAX_ITEMS', async () => {
