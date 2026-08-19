@@ -335,7 +335,7 @@ from across a hall.
 | `client/src/components/RichDoc.jsx` | the shared renderer |
 | `server/test/richText.test.js` | the validator, against the limits and the id whitelist |
 | `server/test/uploads.test.js` | magic bytes, caps, serving headers, the sweep's age guard |
-| `client/test/richText.test.js` | the walker, against object fixtures — the first client tests in the repo |
+| `client/test/richText.test.js` | the walker, against object fixtures — joins the existing `client/test/` suite |
 
 ### Modified
 
@@ -390,8 +390,9 @@ Word-style paste of `<span style>` inside `<font>` (formatting dropped, text kep
 runs, empty paragraphs collapsed, an `<img>` with no `data-img-id` dropped, `ul`/`ol` with
 formatted items, adjacent identical spans merged.
 
-`client/package.json` already declares `"test": "node --test"` and the root `npm test`
-already runs both packages, so these are picked up with no configuration.
+It joins the three suites already in `client/test/`, which run on `node:test` with ESM
+imports and no test framework. `client/package.json` declares `"test": "node --test"` and
+the root `npm test` runs both packages, so the new file needs no configuration.
 
 ### By hand
 
