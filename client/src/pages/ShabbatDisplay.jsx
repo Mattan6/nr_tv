@@ -21,7 +21,11 @@ import useCanvasScale from '../hooks/useCanvasScale';
 // asking it to resolve חול prayers would be incoherent, and the ?screen=shabbat preview would
 // otherwise post weekday times under שבת headings on any day but Saturday.
 const ShabbatDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
-  const scale = useCanvasScale(safeArea);
+  const scale = useCanvasScale();
+  // Padding inside the canvas rather than a factor on the scale — see SynagogueDisplay and
+  // hooks/useCanvasScale.js. Whole canvas pixels keep the content box on the pixel grid.
+  const insetX = Math.round(1920 * safeArea.x);
+  const insetY = Math.round(1080 * safeArea.y);
   // Takes maz, pasuk and ded off the model, and pointedly not azk, joke or ann: לעילוי נשמת
   // and בדיחות ליאור are absent from this board by design, not omission, and הודעות left it
   // when הקדשת הלוח took the third slot in the right-hand column. All three still appear on
@@ -55,7 +59,7 @@ const ShabbatDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
           dir="rtl"
           style={{
             position: 'absolute',
-            inset: 0,
+            inset: `${insetY}px ${insetX}px`,
             fontFamily: SANS,
             color: C.ink,
             background: C.page,

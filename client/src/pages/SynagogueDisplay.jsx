@@ -13,10 +13,15 @@ import useCanvasScale from '../hooks/useCanvasScale';
 // pages/MobileDisplay.jsx. The fit itself lives in hooks/useCanvasScale.js: pages/ShabbatDisplay.jsx
 // needs the identical arithmetic, and it belongs to neither page.
 //
-// safeArea holds back a fraction of each axis before fitting, for TVs that crop their own
-// edges — pages/TvDisplay.jsx passes it. Zero is a no-op, so / fits exactly as it always has.
+// safeArea holds back a margin for TVs that crop their own edges — pages/TvDisplay.jsx passes
+// it. It is padding inside the canvas, NOT a factor on the scale: shrinking the scale to make
+// room was what pinned the shul's panel at 0.92 device pixels per canvas pixel and smeared
+// every hairline on the board. See hooks/useCanvasScale.js. Zero is a no-op, so / is unchanged.
 const SynagogueDisplay = ({ safeArea = { x: 0, y: 0 }, showToggle = true }) => {
-  const scale = useCanvasScale(safeArea);
+  const scale = useCanvasScale();
+  // Whole canvas pixels, so the content box lands on the grid the snapped scale just bought.
+  const insetX = Math.round(1920 * safeArea.x);
+  const insetY = Math.round(1080 * safeArea.y);
   const {
     screen,
     setScreen,
@@ -57,7 +62,7 @@ const SynagogueDisplay = ({ safeArea = { x: 0, y: 0 }, showToggle = true }) => {
           dir="rtl"
           style={{
             position: 'absolute',
-            inset: 0,
+            inset: `${insetY}px ${insetX}px`,
             padding: '38px 46px 0',
             display: 'flex',
             flexDirection: 'column',
