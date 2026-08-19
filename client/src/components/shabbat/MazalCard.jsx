@@ -7,7 +7,7 @@ const MazalCard = ({ maz, rotationKey }) => (
   <div
     style={{
       background: 'linear-gradient(180deg,#e9f0f8,#dbe7f3)',
-      border: '1px solid rgba(200,168,105,0.55)',
+      border: `1px solid ${C.goldEdge}`,
       borderRadius: '18px',
       padding: '14px 24px',
       textAlign: 'center',

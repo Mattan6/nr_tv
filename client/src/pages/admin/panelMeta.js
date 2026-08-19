@@ -1,4 +1,4 @@
-// Presentation for the four panels. Mirrors the field keys in
+// Presentation for the panels. Mirrors the field keys in
 // server/src/store/panels.js; the server owns validation, this owns the Hebrew.
 // The duplication is deliberate — deriving one from the other would couple
 // validation to UI copy. Adding a field means editing both.
@@ -66,6 +66,23 @@ export const PANEL_META = {
     ],
     summary: (item) => item.name,
     sub: (item) => [item.detail, item.date].filter(Boolean).join(' · '),
+  },
+  // הקדשת הלוח, on the שבת board only. Three fields because the card sets them in three
+  // different types — see server/src/store/panels.js and shabbat/DedicationCard.jsx. The
+  // placeholders carry the phrasing the design was drawn with, so a gabbai adding his first
+  // dedication can see the shape of one rather than guess it.
+  dedication: {
+    title: 'הקדשת לוח השבת',
+    icon: '🕍',
+    addLabel: 'הוסף הקדשה',
+    emptyLabel: 'אין הקדשה — הלוח יזמין לפנות לגבאי',
+    fields: [
+      { key: 'lead', label: 'נוסח ההקדשה', type: 'text', required: true, placeholder: 'מוקדש להצלחת' },
+      { key: 'names', label: 'שם המוקדש', type: 'text', required: true, placeholder: 'משפחת מזוז' },
+      { key: 'note', label: 'סיומת', type: 'text', required: false, placeholder: 'בכל העניינים' },
+    ],
+    summary: (item) => item.names,
+    sub: (item) => [item.lead, item.note].filter(Boolean).join(' · '),
   },
   ticker: {
     title: 'פס תחתון',

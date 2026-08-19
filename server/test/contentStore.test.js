@@ -211,6 +211,22 @@ test('backfills an absent שבת שיעורים list as empty without quarantini
   assert.strictEqual(doc.announcements.length, DEFAULT_CONTENT.announcements.length);
 });
 
+// הקדשת הלוח is newer still, and empty for the same reason the שבת שיעורים list is: there is
+// no honest value to invent. A dedication names a real family, so a seeded one would put a
+// stranger's name on a real shul's board the first time it booted.
+test('backfills an absent dedication list as empty without quarantining the file', async (t) => {
+  const { store, file } = await tmpStore(t);
+  const legacy = structuredClone(DEFAULT_CONTENT);
+  delete legacy.dedication;
+  await fs.writeFile(file, JSON.stringify(legacy), 'utf8');
+
+  const doc = await store.read();
+
+  assert.deepStrictEqual(doc.dedication, []);
+  // The document was not treated as wrong-shaped — the gabbai's real content survived.
+  assert.strictEqual(doc.announcements.length, DEFAULT_CONTENT.announcements.length);
+});
+
 test('leaves an explicitly empty ticker empty', async (t) => {
   const { store, file } = await tmpStore(t);
   const emptied = structuredClone(DEFAULT_CONTENT);

@@ -35,6 +35,12 @@ module.exports = {
     { id: 'seed-azk-2', name: 'חנה נינט ריין בת פרטונה ז״ל', detail: 'תנצב״ה', date: "ה' בתמוז", isActive: true },
     { id: 'seed-azk-3', name: 'רוברט ישראל בן רוזי ז״ל', detail: 'לעילוי נשמת', date: 'כ״ג בטבת', isActive: true },
   ],
+  // הקדשת הלוח, and empty for the same reason shiurimShabbat above is — there is no honest
+  // value to invent. A dedication names a real family, so seeding one would put a stranger's
+  // name on a real shul's board the first time it booted, and backfilling an upgrade from
+  // that seed would do it to a shul that has been running for a year. Until the gabbai adds
+  // one, the card shows its own invitation to dedicate instead.
+  dedication: [],
   // The bottom ticker, one item per line. These four are the string that lived in
   // client/src/components/display/displayData.js as TICKER, split on its • separators, so
   // a server that upgrades into this feature shows exactly what it showed before.

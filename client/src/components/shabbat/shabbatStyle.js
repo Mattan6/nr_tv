@@ -16,6 +16,10 @@ export const C = {
   goldLight: '#d7bb85',
   // Gold text on white. #c8a869 fails legibility across a hall; this is the same hue darkened.
   goldDeep: '#8a7136',
+  // The gold card edge, worn by the two cards that are about people rather than times —
+  // מזל טוב and הקדשת הלוח. A token rather than two copies of the same rgba() for the reason
+  // at the top of this file: on white, a border one percent apart reads as a mistake.
+  goldEdge: 'rgba(200,168,105,0.55)',
   deep: 'linear-gradient(165deg,#20486e,#12304c)',
   onDeep: '#ffffff',
   onDeepSoft: '#94aec9',

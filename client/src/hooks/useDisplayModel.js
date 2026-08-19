@@ -54,7 +54,7 @@ export default function useDisplayModel(forceScreen) {
   // while the calendar is still inside that same schedule segment. See below.
   const [override, setOverride] = useState(null);
   const [now, setNow] = useState(() => new Date());
-  // One counter, not three: the three rotating panels have always advanced in
+  // One counter, not one per panel: the rotating panels have always advanced in
   // lockstep. The modulo is taken at render time against the CURRENT list (see
   // `pick`), because the lists are editable now (via /adminGabbai) and a list that
   // shrinks must not leave an index pointing past its end.
@@ -74,6 +74,7 @@ export default function useDisplayModel(forceScreen) {
     shiurimShabbat,
     mazal,
     azkarot,
+    dedication,
     jokes,
     ticker,
     settings,
@@ -120,8 +121,8 @@ export default function useDisplayModel(forceScreen) {
     return () => clearInterval(t);
   }, []);
 
-  // Rotate announcements / mazal / azkarot. The counter only ever increases; the
-  // modulo is taken at render time against the current list (see `pick`).
+  // Rotate announcements / mazal / azkarot / dedication. The counter only ever increases;
+  // the modulo is taken at render time against the current list (see `pick`).
   useEffect(() => {
     const r = setInterval(() => setTick((t) => t + 1), ROTATE_MS);
     return () => clearInterval(r);
@@ -308,6 +309,10 @@ export default function useDisplayModel(forceScreen) {
   const ann = pick(announcements);
   const maz = pick(mazal) || {};
   const azk = pick(azkarot) || {};
+  // הקדשת הלוח. Null rather than {} when the list is empty, because empty is the normal
+  // state here — the panel is seeded empty — and the card renders a different body for it
+  // rather than three blank lines. See DedicationCard.
+  const ded = pick(dedication);
   // Its own counter, so `pick` (which is on the 6.5s tick) can't be reused here.
   //
   // Shuffled per mount rather than walked in the order the server sends. That order is fixed
@@ -353,6 +358,7 @@ export default function useDisplayModel(forceScreen) {
     ann,
     maz,
     azk,
+    ded,
     joke,
     haftara,
     pasuk,

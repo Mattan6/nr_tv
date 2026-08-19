@@ -24,11 +24,13 @@ const PANEL_ARRAY_KEYS = ['announcements', 'shiurim', 'mazal', 'azkarot'];
 // present but empty means the gabbai emptied it on purpose, and is left alone; otherwise
 // clearing the ticker would silently refill itself on the next restart.
 //
-// `shiurimShabbat` is the newest member and the one whose seed is deliberately EMPTY. The
-// other backfilled keys restore what the wall used to show; this one must not, because an
-// upgrading shul already has its שיעורים on the חול list and copying them into both would
-// put every weekday שיעור on the שבת board — the exact overlap the split exists to remove.
-const BACKFILL_KEYS = ['ticker', 'settings', 'shiurimShabbat'];
+// `shiurimShabbat` and `dedication` are the newest members and the two whose seeds are
+// deliberately EMPTY. The other backfilled keys restore what the wall used to show; these
+// must not. An upgrading shul already has its שיעורים on the חול list, and copying them into
+// both would put every weekday שיעור on the שבת board — the exact overlap the split exists to
+// remove. A dedication names a real family, so there is no value to seed that would not be
+// a stranger's name on someone's wall.
+const BACKFILL_KEYS = ['ticker', 'settings', 'shiurimShabbat', 'dedication'];
 
 function withDefaults(doc) {
   for (const key of BACKFILL_KEYS) {

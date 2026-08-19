@@ -1,7 +1,8 @@
-// The four editable panels. Every panel is a list of items carrying an id and an
-// isActive flag; they differ only in their text fields. Describing that difference
-// as data — rather than as four sets of near-identical handlers — is what lets one
-// controller and one pair of React screens serve all four.
+// The editable panels. Every panel is a list of items carrying an id and an isActive
+// flag; they differ only in their text fields. Describing that difference as data —
+// rather than as one set of near-identical handlers per panel — is what lets one
+// controller and one pair of React screens serve all of them, and is why adding
+// הקדשת הלוח below was a schema entry rather than a route.
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const MAX_LEN = 300;
 
@@ -40,6 +41,18 @@ const PANELS = {
     name: { required: true },
     detail: { required: false },
     date: { required: true },
+  },
+  // הקדשת הלוח — who this week's שבת board is dedicated for. Three fields rather than one
+  // free-text line because the card sets them in three different types: a small steel lead,
+  // the name in large serif, and a gold closing note. Handing the gabbai one string would
+  // mean either losing that hierarchy or asking him to guess where the line breaks fall.
+  //
+  // `note` is optional: plenty of dedications end at the name, and the card drops the line
+  // rather than leaving a gap when it is blank.
+  dedication: {
+    lead: { required: true },
+    names: { required: true },
+    note: { required: false },
   },
   // The bottom ticker, one item per line. Modelled as a list rather than as one long
   // string so the gabbai never types the • separator himself, and so a single line can

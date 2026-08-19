@@ -3,17 +3,19 @@ const assert = require('node:assert');
 
 const { isPanel, validateItem, validateSettings, PANEL_KEYS } = require('../src/store/panels');
 
-test('recognises exactly the six panels', () => {
+test('recognises exactly the seven panels', () => {
   assert.deepStrictEqual(PANEL_KEYS, [
     'announcements',
     'shiurim',
     'shiurimShabbat',
     'mazal',
     'azkarot',
+    'dedication',
     'ticker',
   ]);
   assert.strictEqual(isPanel('shiurim'), true);
   assert.strictEqual(isPanel('shiurimShabbat'), true);
+  assert.strictEqual(isPanel('dedication'), true);
   assert.strictEqual(isPanel('ticker'), true);
   assert.strictEqual(isPanel('parnas'), false);
   // 'settings' travels in the same document but is a single record, not a panel — it has
@@ -77,6 +79,24 @@ test('allows an optional field to be empty', () => {
   const result = validateItem('azkarot', { name: 'משה בן פרטונה ז״ל', detail: '', date: 'י״ח באלול' });
 
   assert.deepStrictEqual(result.fields, { name: 'משה בן פרטונה ז״ל', detail: '', date: 'י״ח באלול' });
+});
+
+// הקדשת הלוח. Three lines on the שבת board — a lead ("מוקדש להצלחת"), the name it is
+// dedicated to, and a closing note ("בכל העניינים"). The note is optional because plenty of
+// dedications end at the name, and the card simply drops the line when it is blank.
+test('the dedication panel requires a lead and a name but not the closing note', () => {
+  const full = { lead: 'מוקדש להצלחת', names: 'משפחת מזוז', note: 'בכל העניינים' };
+  assert.deepStrictEqual(validateItem('dedication', full).fields, full);
+
+  assert.deepStrictEqual(validateItem('dedication', { ...full, note: '  ' }).fields, {
+    ...full,
+    note: '',
+  });
+
+  assert.deepStrictEqual(validateItem('dedication', { lead: '', names: '', note: 'בכל העניינים' }).errors, {
+    lead: 'שדה חובה',
+    names: 'שדה חובה',
+  });
 });
 
 test('preserves newlines inside announcement text', () => {

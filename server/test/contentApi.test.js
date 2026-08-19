@@ -208,6 +208,39 @@ test('PUT /api/content/settings rejects a malformed time with a field error', as
   assert.strictEqual((await (await fetch(`${base}/settings`)).json()).shabbat.mincha, '');
 });
 
+// --- The dedication panel ---------------------------------------------------------
+//
+// Seeded empty, unlike every other panel — so this is also the one place the API's
+// "a panel starts as []" path is exercised end to end.
+
+test('dedication starts empty and round-trips through the panel routes', async () => {
+  assert.deepStrictEqual(await (await fetch(`${base}/dedication`)).json(), []);
+
+  const created = await (
+    await send('POST', `${base}/dedication`, {
+      lead: 'מוקדש להצלחת',
+      names: 'משפחת מזוז',
+      note: 'בכל העניינים',
+    })
+  ).json();
+  assert.strictEqual(created.isActive, true);
+  assert.strictEqual(created.names, 'משפחת מזוז');
+
+  const del = await send('DELETE', `${base}/dedication/${created.id}`);
+  assert.strictEqual(del.status, 200);
+  assert.deepStrictEqual(await (await fetch(`${base}/dedication`)).json(), []);
+});
+
+test('dedication accepts a blank closing note but not a blank name', async () => {
+  const ok = await send('POST', `${base}/dedication`, { lead: 'מוקדש לרפואת', names: 'משפחת כהן', note: '' });
+  assert.strictEqual(ok.status, 201);
+  assert.strictEqual((await ok.json()).note, '');
+
+  const bad = await send('POST', `${base}/dedication`, { lead: 'מוקדש לרפואת', names: '  ', note: '' });
+  assert.strictEqual(bad.status, 400);
+  assert.ok((await bad.json()).errors.names);
+});
+
 // --- The ticker panel -------------------------------------------------------------
 
 test('ticker is a panel like any other', async () => {

@@ -6,7 +6,7 @@ import ZmanimGrid from '../components/shabbat/ZmanimGrid';
 import ShiurimCard from '../components/shabbat/ShiurimCard';
 import MazalCard from '../components/shabbat/MazalCard';
 import ParashaVerseCard from '../components/shabbat/ParashaVerseCard';
-import AnnouncementsCard from '../components/shabbat/AnnouncementsCard';
+import DedicationCard from '../components/shabbat/DedicationCard';
 import { C, SANS } from '../components/shabbat/shabbatStyle';
 import useDisplayModel from '../hooks/useDisplayModel';
 import useCanvasScale from '../hooks/useCanvasScale';
@@ -22,10 +22,11 @@ import useCanvasScale from '../hooks/useCanvasScale';
 // otherwise post weekday times under שבת headings on any day but Saturday.
 const ShabbatDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
   const scale = useCanvasScale(safeArea);
-  // Takes maz, pasuk and ann off the model, and pointedly not azk or joke: לעילוי נשמת and
-  // בדיחות ליאור are absent from this board by design, not omission — both keep appearing on
-  // the weekday board only.
-  const { clock, hebDate, greg, ticker, haftara, parasha, shabbatCards, next, prayers, zmanimRows, shiurim, maz, pasuk, ann, tick } =
+  // Takes maz, pasuk and ded off the model, and pointedly not azk, joke or ann: לעילוי נשמת
+  // and בדיחות ליאור are absent from this board by design, not omission, and הודעות left it
+  // when הקדשת הלוח took the third slot in the right-hand column. All three still appear on
+  // the weekday board and the phone, which is where a congregant reads them.
+  const { clock, hebDate, greg, ticker, haftara, parasha, shabbatCards, next, prayers, zmanimRows, shiurim, maz, pasuk, ded, tick } =
     useDisplayModel('shabbat');
 
   // The שבת list spans two days and each row is already tagged with the day it happens on —
@@ -107,7 +108,9 @@ const ShabbatDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
               <div style={{ display: 'grid', gridTemplateRows: 'auto auto 1fr', gap: '20px', minHeight: 0 }}>
                 <MazalCard maz={maz} rotationKey={tick} />
                 <ParashaVerseCard pasuk={pasuk} rotationKey={tick} />
-                <AnnouncementsCard ann={ann} rotationKey={tick} />
+                {/* No rotationKey: this card fades on the dedication changing, not on the
+                    shared 6.5s tick. See DedicationCard. */}
+                <DedicationCard ded={ded} parasha={parasha} />
               </div>
             </div>
           </div>

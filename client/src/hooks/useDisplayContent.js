@@ -15,6 +15,10 @@ const EMPTY_LISTS = {
   shiurimShabbat: [],
   mazal: [],
   azkarot: [],
+  // הקדשת הלוח, on the שבת board only. Legitimately empty until the gabbai adds one — the
+  // server seeds it that way on purpose (see BACKFILL_KEYS in server/src/store/contentStore.js),
+  // and the card's own copy invites him to.
+  dedication: [],
   jokes: [],
   ticker: [],
 };
