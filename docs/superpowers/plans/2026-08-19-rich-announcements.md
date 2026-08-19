@@ -1033,7 +1033,7 @@ Create `client/test/richText.test.js`. It matches the ESM + `node:test` style of
 ```js
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { domToDoc, docFromPlainText } from '../src/pages/Admin/richText.js';
+import { domToDoc, docFromPlainText } from '../src/pages/admin/richText.js';
 
 // Fake DOM nodes. domToDoc reads only these five properties, which is the whole reason
 // this file needs no jsdom.
@@ -1176,7 +1176,7 @@ test('docFromPlainText turns a legacy announcement into paragraphs', () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `npm --prefix client test`
-Expected: FAIL — cannot resolve `../src/pages/Admin/richText.js`.
+Expected: FAIL — cannot resolve `../src/pages/admin/richText.js`.
 
 - [ ] **Step 3: Write the implementation**
 
