@@ -385,8 +385,6 @@ Append to `server/test/contentApi.test.js`, **before** the `MAX_ITEMS` test (the
 ```js
 // --- Rich הודעות ------------------------------------------------------------------
 
-const RICH_ID = '3f2b1a0c-4d5e-6f70-8192-a3b4c5d6e7f8.jpg';
-
 test('POST an announcement with a doc returns the derived text', async () => {
   const res = await send('POST', `${base}/announcements`, {
     doc: { blocks: [{ type: 'p', spans: [{ text: 'שיעור ' }, { text: 'הערב', marks: ['b'] }] }] },
@@ -591,7 +589,7 @@ test('a JPEG is stored under a uuid and served back byte for byte', async () => 
   assert.deepStrictEqual(Buffer.from(await got.arrayBuffer()), JPEG);
 });
 
-test('the served image is uncacheable-proof and unsniffable', async () => {
+test('the served image is cacheable forever and unsniffable', async () => {
   const { id } = await (await post(JPEG)).json();
   const got = await fetch(`${base}/${id}`);
 
@@ -2026,7 +2024,16 @@ In the field loop, add the rich branch ahead of the existing `textarea` branch:
             ) : field.type === 'textarea' ? (
 ```
 
-The `<label htmlFor={field.key}>` above it now points at nothing, since a `contentEditable` div takes no `id`. Give the editor's surface that id instead by passing it through — or simplest, drop `htmlFor` for the rich branch by rendering the label without it. Keep the visible text identical.
+The `<label htmlFor={field.key}>` above the field now points at nothing, because the rich branch renders a `contentEditable` div and not an element with that `id`. **Drop `htmlFor` on the rich branch** — a label pointing at a missing id is worse for a screen reader than one pointing at nothing. Replace the label with:
+
+```jsx
+            <label style={S.label} htmlFor={field.type === 'rich' ? undefined : field.key}>
+              {field.label}
+              {!field.required && ' (לא חובה)'}
+            </label>
+```
+
+The visible text is unchanged.
 
 - [ ] **Step 4: Run the test suites**
 
@@ -2187,4 +2194,4 @@ Checked against the spec, section by section:
 
 Names are consistent across tasks: `validateDoc`, `sweepOrphans(doc, now)`, `saveImage(buffer)`, `detectType`, `domToDoc`, `docToNodes`, `docFromPlainText`, `emptyDoc`, `uploadImage(file)`, and `<RichDoc doc text imageMaxHeight />`.
 
-One thing an implementer should raise rather than silently resolve: Task 8 step 3 leaves `<label htmlFor>` pointing at an element that has no `id`, and offers two ways out. Either is fine; picking one and saying which is enough.
+Known gap, accepted: `MAX_DIR_BYTES` (the 50MB directory ceiling) has no test of its own. It guards the same path as the file-count cap, which is tested, and exercising it would mean writing 50MB inside a unit suite.
