@@ -1,7 +1,8 @@
 # Rich הודעות — a WYSIWYG editor with images — design
 
 **Date:** 2026-08-19
-**Status:** Approved, not yet implemented.
+**Status:** Approved — fully shipped. Implemented by
+`docs/superpowers/plans/2026-08-19-rich-announcements.md`.
 **Scope:** The `announcements` panel only. The gabbai gets a small WYSIWYG editor in
 `/adminGabbai` — bold, italic, underline, lists, and an uploaded image — and the three
 surfaces that render הודעות learn to draw it.
