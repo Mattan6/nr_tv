@@ -5,9 +5,10 @@ import MobileDisplay from './pages/MobileDisplay';
 import TvDisplay from './pages/TvDisplay';
 import Zmanim from './pages/Zmanim';
 import AdminHome from './pages/admin/AdminHome';
+import BoardPanels from './pages/admin/BoardPanels';
 import PanelList from './pages/admin/PanelList';
 import ItemForm from './pages/admin/ItemForm';
-import ShabbatTimesForm from './pages/admin/ShabbatTimesForm';
+import TimesForm from './pages/admin/TimesForm';
 import useIsMobile from './hooks/useIsMobile';
 
 const queryClient = new QueryClient({
@@ -43,7 +44,11 @@ function App() {
           {/* Above /:panel for the reader's benefit. React Router ranks static segments
               over dynamic ones regardless of order, unlike Express — see routes/content.js,
               where the same pair of paths does depend on declaration order. */}
-          <Route path="/adminGabbai/settings" element={<ShabbatTimesForm />} />
+          <Route path="/adminGabbai/board/:board" element={<BoardPanels />} />
+          {/* The bare /settings is kept as an alias for שבת: it is the address the gabbai's
+              phone has bookmarked from before there was a second board with times. */}
+          <Route path="/adminGabbai/settings" element={<TimesForm />} />
+          <Route path="/adminGabbai/settings/:group" element={<TimesForm />} />
           <Route path="/adminGabbai/:panel" element={<PanelList />} />
           <Route path="/adminGabbai/:panel/new" element={<ItemForm />} />
           <Route path="/adminGabbai/:panel/:id" element={<ItemForm />} />

@@ -1,43 +1,28 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getContent } from '../../services/content';
-import { PANEL_META, PANEL_KEYS } from './panelMeta';
+import { BOARDS } from './boards';
 import * as S from './adminStyles';
 
+// The admin's first level: which board, not which panel.
+//
+// It was a flat list of every panel until ראש השנה arrived. That does not survive the boards
+// coming after it — יום כיפור, סוכות, פסח and שבועות would push it past twenty rows on a phone
+// — so the level exists now, while there are four boards to shake it out on rather than eight.
+//
+// No counts here, deliberately. A board has no single number, and fetching the whole document
+// to sum five panels would make the very first screen wait on a request it has nothing to show
+// from. The counts live one level down, on BoardPanels, where each one means something.
 export default function AdminHome() {
-  const [counts, setCounts] = useState(null);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    getContent()
-      .then((doc) =>
-        setCounts(Object.fromEntries(PANEL_KEYS.map((key) => [key, (doc[key] || []).length])))
-      )
-      .catch(() => setError('לא ניתן להתחבר לשרת'));
-  }, []);
-
   return (
     <div style={S.screen}>
       <h1 style={S.title}>ניהול תוכן</h1>
-      {error && <div style={S.error}>{error}</div>}
 
-      {PANEL_KEYS.map((key) => (
-        <Link key={key} to={`/adminGabbai/${key}`} style={S.row}>
-          <span style={{ fontSize: '26px' }}>{PANEL_META[key].icon}</span>
-          <span style={{ flex: 1, fontSize: '19px', fontWeight: 600 }}>{PANEL_META[key].title}</span>
-          <span style={{ color: S.COLORS.gold, fontSize: '18px' }}>
-            {counts ? counts[key] : '…'}
-          </span>
+      {BOARDS.map((board) => (
+        <Link key={board.id} to={`/adminGabbai/board/${board.id}`} style={S.row}>
+          <span style={{ fontSize: '26px' }}>{board.icon}</span>
+          <span style={{ flex: 1, fontSize: '19px', fontWeight: 600 }}>{board.title}</span>
           <span style={S.muted}>‹</span>
         </Link>
       ))}
-
-      {/* A single record rather than a list, so it carries no count and has its own screen. */}
-      <Link to="/adminGabbai/settings" style={{ ...S.row, marginTop: '18px' }}>
-        <span style={{ fontSize: '26px' }}>🕯</span>
-        <span style={{ flex: 1, fontSize: '19px', fontWeight: 600 }}>זמני שבת</span>
-        <span style={S.muted}>‹</span>
-      </Link>
     </div>
   );
 }

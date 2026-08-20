@@ -6,8 +6,26 @@ import RichTextEditor from './RichTextEditor';
 import { docFromPlainText, emptyDoc } from './richText';
 import * as S from './adminStyles';
 
+// What a field holds before the gabbai touches it — for a new item, and for a stored one whose
+// field is empty.
+//
+// A select resolves to its FIRST OPTION rather than to '', and that is not cosmetic. A
+// <select> cannot display an empty value, so it would show the first option regardless while
+// state still held '' — and the save would then send '' for a field the gabbai watched say
+// 'מכירה פומבית'. The board reads a blank as the same default, so nothing looks wrong on the
+// wall; the stored item just quietly disagrees with the form that wrote it, and says so the
+// next time anyone opens it. Resolving here keeps state and display the same value.
+const initialValue = (field, item) => {
+  // A legacy announcement has no doc. Converting it here is the whole migration: the next
+  // save stores it as one.
+  if (field.type === 'rich') return item ? item.doc || docFromPlainText(item.text) : emptyDoc();
+  const stored = item ? item[field.key] : '';
+  if (field.type === 'select') return stored || field.options[0].value;
+  return stored || '';
+};
+
 const blankValues = (meta) =>
-  Object.fromEntries((meta?.fields || []).map((field) => [field.key, field.type === 'rich' ? emptyDoc() : '']));
+  Object.fromEntries((meta?.fields || []).map((field) => [field.key, initialValue(field, null)]));
 
 export default function ItemForm() {
   const { panel, id } = useParams();
@@ -48,16 +66,7 @@ export default function ItemForm() {
           return;
         }
         setItem(found);
-        setValues(
-          Object.fromEntries(
-            meta.fields.map((f) => [
-              f.key,
-              // A legacy announcement has no doc. Converting it here is the whole
-              // migration: the next save stores it as one.
-              f.type === 'rich' ? found.doc || docFromPlainText(found.text) : found[f.key] || '',
-            ])
-          )
-        );
+        setValues(Object.fromEntries(meta.fields.map((f) => [f.key, initialValue(f, found)])));
       })
       .catch(() => setMessage('לא ניתן לטעון את הפריט'))
       .finally(() => setLoading(false));
@@ -109,6 +118,8 @@ export default function ItemForm() {
 
   return (
     <div style={S.screen}>
+      {/* Back to the LIST, not to the board: the gabbai came from the list and usually has
+          another row to add after this one. */}
       <Link to={`/adminGabbai/${panel}`} style={S.backLink}>‹ חזרה</Link>
       <h1 style={S.title}>{isNew ? meta.addLabel : `עריכת ${meta.title}`}</h1>
       {message && <div style={S.error}>{message}</div>}
@@ -130,6 +141,25 @@ export default function ItemForm() {
                 onChange={(doc) => setField(field.key, doc)}
                 disabled={disabled}
               />
+            ) : field.type === 'select' ? (
+              // Native, not a custom listbox: this admin is used on a phone, and a native
+              // select gets the platform's own picker — a full-height wheel on iOS — for free.
+              //
+              // No `|| options[0].value` fallback here on purpose: initialValue already
+              // resolved it, so what the gabbai sees is exactly what will be saved.
+              <select
+                id={field.key}
+                value={values[field.key]}
+                onChange={(e) => setField(field.key, e.target.value)}
+                disabled={disabled}
+                style={{ ...S.input, opacity: disabled ? 0.6 : 1 }}
+              >
+                {field.options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             ) : field.type === 'textarea' ? (
               <textarea
                 id={field.key}

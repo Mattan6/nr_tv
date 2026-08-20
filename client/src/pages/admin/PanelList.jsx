@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { getPanel, updateItem, deleteItem } from '../../services/content';
+import { getPanel, updateItem, deleteItem, reorderPanel } from '../../services/content';
 import { PANEL_META } from './panelMeta';
+import { boardOfPanel } from './boards';
 import * as S from './adminStyles';
 
 export default function PanelList() {
@@ -32,10 +33,16 @@ export default function PanelList() {
       .finally(() => setLoading(false));
   }, [panel, meta]);
 
+  // Back to the panel's own board rather than to the admin home — one level up, which is
+  // where the gabbai came from. A panel in no board (a key added to panelMeta but not yet to
+  // boards.js) falls back to home rather than to a dead link.
+  const board = boardOfPanel(panel);
+  const backTo = board ? `/adminGabbai/board/${board}` : '/adminGabbai';
+
   if (!meta) {
     return (
       <div style={S.screen}>
-        <Link to="/adminGabbai" style={S.backLink}>‹ חזרה</Link>
+        <Link to={backTo} style={S.backLink}>‹ חזרה</Link>
         <p style={S.muted}>פאנל לא קיים</p>
       </div>
     );
@@ -55,6 +62,30 @@ export default function PanelList() {
     }
   };
 
+  // Optimistic, exactly like the toggle above: the row moves under the finger and rolls back
+  // if the save fails.
+  //
+  // The WHOLE id list goes to the server, not "move this one up" — so an order computed
+  // against a list the server no longer holds is refused rather than partly applied. See
+  // reorderPanel in the controller.
+  const move = async (index, delta) => {
+    const target = index + delta;
+    if (target < 0 || target >= items.length) return;
+
+    const next = [...items];
+    [next[index], next[target]] = [next[target], next[index]];
+
+    const previous = items;
+    setItems(next);
+    setError('');
+    try {
+      await reorderPanel(panel, next.map((it) => it.id));
+    } catch {
+      setItems(previous);
+      setError('הסדר לא נשמר');
+    }
+  };
+
   const remove = async (item) => {
     if (!window.confirm(`למחוק את "${meta.summary(item)}"?`)) return;
     setError('');
@@ -68,14 +99,14 @@ export default function PanelList() {
 
   return (
     <div style={S.screen}>
-      <Link to="/adminGabbai" style={S.backLink}>‹ חזרה</Link>
+      <Link to={backTo} style={S.backLink}>‹ חזרה</Link>
       <h1 style={S.title}>{meta.title}</h1>
       {error && <div style={S.error}>{error}</div>}
 
       {loading && <p style={S.muted}>טוען…</p>}
       {!loading && items.length === 0 && <p style={S.muted}>{meta.emptyLabel}</p>}
 
-      {items.map((item) => (
+      {items.map((item, index) => (
         <div key={item.id} style={{ ...S.card, opacity: item.isActive ? 1 : 0.45 }}>
           <div style={{ fontSize: '18px', fontWeight: 600, whiteSpace: 'pre-line', lineHeight: 1.35 }}>
             {meta.summary(item)}
@@ -94,6 +125,27 @@ export default function PanelList() {
               />
               {item.isActive ? 'מוצג' : 'מוסתר'}
             </label>
+            {/* Order is the panel's own data — it is what the board renders in, and for the
+                ראש השנה day lists it is the order of the davening. Disabled at the ends rather
+                than hidden, so the row's controls do not shift about as it moves. */}
+            <button
+              type="button"
+              onClick={() => move(index, -1)}
+              disabled={index === 0}
+              aria-label="הזז למעלה"
+              style={{ ...S.button, opacity: index === 0 ? 0.35 : 1, padding: '10px 12px' }}
+            >
+              ▲
+            </button>
+            <button
+              type="button"
+              onClick={() => move(index, 1)}
+              disabled={index === items.length - 1}
+              aria-label="הזז למטה"
+              style={{ ...S.button, opacity: index === items.length - 1 ? 0.35 : 1, padding: '10px 12px' }}
+            >
+              ▼
+            </button>
             <Link to={`/adminGabbai/${panel}/${item.id}`} style={{ ...S.button, textDecoration: 'none' }}>
               ✎ ערוך
             </Link>

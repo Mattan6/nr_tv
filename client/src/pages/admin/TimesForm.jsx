@@ -1,30 +1,23 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { getSettings, updateSettings } from '../../services/content';
-import { getZmanim, getParasha } from '../../services/hebcal';
-import {
-  SHABBAT_CONFIG,
-  resolveShabbatTimes,
-  shabbatAnchors,
-  upcomingSaturday,
-} from '../../components/display/displayData';
+import { SETTINGS_META, DEFAULT_SETTINGS_GROUP } from './timesMeta';
+import { BOARDS } from './boards';
 import * as S from './adminStyles';
 
-// The five שבת rows, in the order the display posts them. `auto` names the key each row
-// takes out of resolveShabbatTimes' output, which is why it differs from `key`: the
-// stored override is `mincha`, the computed value is `shabMincha`.
-const ROWS = [
-  { key: 'candles', label: 'הדלקת נרות', auto: 'shabCandles' },
-  { key: 'kabbalat', label: 'מנחה וקבלת שבת', auto: 'shabKabbalat' },
-  { key: 'shacharit', label: 'שחרית', auto: 'shabShacharit' },
-  { key: 'mincha', label: 'מנחה', auto: 'shabMincha' },
-  { key: 'arvit', label: 'ערבית מוצ״ש', auto: 'shabArvit' },
-];
+// The pinned-times screen, one instance per settings group.
+//
+// This was ShabbatTimesForm until there was a second board with times. Nothing about how it
+// works changed — only where the five rows and their automatic values come from, which is now
+// a descriptor in timesMeta.js.
+export default function TimesForm() {
+  const { group = DEFAULT_SETTINGS_GROUP } = useParams();
+  const meta = SETTINGS_META[group];
 
-const BLANK = Object.fromEntries(ROWS.map((r) => [r.key, '']));
+  const rows = useMemo(() => meta?.rows || [], [meta]);
+  const blank = useMemo(() => Object.fromEntries(rows.map((r) => [r.key, ''])), [rows]);
 
-export default function ShabbatTimesForm() {
-  const [values, setValues] = useState(BLANK);
+  const [values, setValues] = useState(blank);
   // null until the Hebcal round trip settles, so "still calculating" and "could not be
   // calculated" read differently — they are one slow network apart and the gabbai should
   // not be told the second while the first is true.
@@ -36,15 +29,16 @@ export default function ShabbatTimesForm() {
   const [loading, setLoading] = useState(true);
 
   // The stored overrides. This is the only request the form waits on: it comes from our
-  // own server, on the LAN, and the five inputs are unusable until it answers.
+  // own server, on the LAN, and the inputs are unusable until it answers.
   useEffect(() => {
+    if (!meta) return undefined;
     let cancelled = false;
 
     getSettings()
       .then((stored) => {
         if (cancelled) return;
-        const shabbat = stored?.shabbat || {};
-        setValues({ ...BLANK, ...Object.fromEntries(ROWS.map((r) => [r.key, shabbat[r.key] || ''])) });
+        const saved_ = stored?.[group] || {};
+        setValues({ ...blank, ...Object.fromEntries(rows.map((r) => [r.key, saved_[r.key] || ''])) });
       })
       .catch(() => {
         if (!cancelled) setMessage('לא ניתן לטעון את ההגדרות');
@@ -56,7 +50,7 @@ export default function ShabbatTimesForm() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [group, meta, rows, blank]);
 
   // The automatic values, shown under each field so the gabbai can see what he is about to
   // replace. Deliberately a SEPARATE effect that nothing waits on: these come from Hebcal,
@@ -66,32 +60,23 @@ export default function ShabbatTimesForm() {
   // times the gabbai came here to change. Losing the hint is acceptable; losing the screen
   // is not.
   useEffect(() => {
+    if (!meta) return undefined;
     let cancelled = false;
 
-    const loadAuto = async () => {
-      const saturday = upcomingSaturday(new Date());
-      const [parasha, satZmanim] = await Promise.allSettled([
-        getParasha(SHABBAT_CONFIG.candleLightingMinBeforeSunset),
-        getZmanim(saturday),
-      ]);
-      if (cancelled) return;
-      const value = (r) => (r.status === 'fulfilled' ? r.value : null);
+    meta
+      .load()
+      .then((times) => {
+        if (!cancelled) setAutoTimes(times);
+      })
+      .catch(() => {
+        // Leave it null — every row then reads 'לא ניתן לחשב כרגע' rather than a wrong number.
+        if (!cancelled) setAutoTimes({});
+      });
 
-      // Resolved with NO overrides: this is what each row would show if its field were
-      // left empty, which is exactly the number the decision turns on.
-      setAutoTimes(
-        resolveShabbatTimes({
-          ...shabbatAnchors(value(parasha), saturday),
-          saturdaySunset: value(satZmanim)?.times?.sunset,
-        })
-      );
-    };
-
-    loadAuto();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [group, meta]);
 
   const setField = (key, value) => {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -107,9 +92,12 @@ export default function ShabbatTimesForm() {
     setSaved(false);
 
     try {
-      // All five keys every time. A blank is a real value here — it is what clears an
-      // override — so an omitted field would leave a stale time pinned.
-      await updateSettings({ shabbat: values });
+      // Every key of THIS group, every time. A blank is a real value here — it is what clears
+      // an override — so an omitted field would leave a stale time pinned.
+      //
+      // And only this group: the server merges group-wise, so saving here cannot touch another
+      // board's pinned times. See validateSettings on the server.
+      await updateSettings({ [group]: values });
       setSaved(true);
     } catch (error) {
       const status = error.response?.status;
@@ -121,20 +109,32 @@ export default function ShabbatTimesForm() {
     }
   };
 
+  const backTo = (() => {
+    const board = BOARDS.find((b) => b.settings === group);
+    return board ? `/adminGabbai/board/${board.id}` : '/adminGabbai';
+  })();
+
+  if (!meta) {
+    return (
+      <div style={S.screen}>
+        <Link to="/adminGabbai" style={S.backLink}>‹ חזרה</Link>
+        <p style={S.muted}>הגדרות לא קיימות</p>
+      </div>
+    );
+  }
+
   return (
     <div style={S.screen}>
-      <Link to="/adminGabbai" style={S.backLink}>‹ חזרה</Link>
-      <h1 style={S.title}>זמני שבת</h1>
-      <p style={{ ...S.muted, marginBottom: '18px', lineHeight: 1.5 }}>
-        שדה ריק מחושב אוטומטית מזמני היום. מילוי שעה קובע אותה על הלוח עד שתנקה אותה.
-      </p>
+      <Link to={backTo} style={S.backLink}>‹ חזרה</Link>
+      <h1 style={S.title}>{meta.title}</h1>
+      <p style={{ ...S.muted, marginBottom: '18px', lineHeight: 1.5 }}>{meta.intro}</p>
 
       {message && <div style={S.error}>{message}</div>}
       {saved && <div style={savedBanner}>נשמר — הלוח יתעדכן תוך חצי דקה</div>}
       {loading && <p style={S.muted}>טוען…</p>}
 
       <form onSubmit={submit}>
-        {ROWS.map((row) => {
+        {rows.map((row) => {
           const auto = autoTimes?.[row.auto];
           return (
             <div key={row.key} style={{ marginBottom: '18px' }}>
@@ -143,7 +143,7 @@ export default function ShabbatTimesForm() {
                 <input
                   id={row.key}
                   type="time"
-                  value={values[row.key]}
+                  value={values[row.key] || ''}
                   onChange={(e) => setField(row.key, e.target.value)}
                   disabled={loading || saving}
                   style={{ ...S.input, flex: 1, opacity: loading || saving ? 0.6 : 1 }}
@@ -164,7 +164,7 @@ export default function ShabbatTimesForm() {
                 {autoTimes === null
                   ? 'מחשב…'
                   : auto
-                    ? `חישוב לשבת הקרובה: ${auto}`
+                    ? `${meta.autoLabel}: ${auto}`
                     : 'לא ניתן לחשב כרגע'}
               </div>
               {fieldErrors[row.key] && <div style={S.fieldError}>{fieldErrors[row.key]}</div>}
