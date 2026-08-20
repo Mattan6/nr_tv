@@ -14,6 +14,7 @@ import {
   upcomingSaturday,
   shabbatFriday,
   shabbatAnchors,
+  parashaAt,
   shabbatCardTimes,
   resolveShabbatTimes,
   screenSegment,
@@ -164,7 +165,11 @@ export default function useDisplayModel(forceScreen) {
         // Friday's, for the שקיעה the שבת board prints under הדלקת נרות. Duplicates the first
         // leg on Fridays, and is accepted for the same reason the line above is.
         getZmanim(shabbatFriday(instant)),
-        getParasha(SHABBAT_CONFIG.candleLightingMinBeforeSunset),
+        // Anchored to Israel's day like every leg above it, rather than left to Hebcal's own
+        // server clock to decide which week the request landed in. Hebcal answers Saturday's
+        // block all day Saturday, so this returns the same Shabbat `saturday` names on every
+        // day the שבת board is up — see getParasha and parashaAt.
+        getParasha(SHABBAT_CONFIG.candleLightingMinBeforeSunset, today),
       ]);
       if (cancelled) return;
       const value = (r) => (r.status === 'fulfilled' ? r.value : null);
@@ -185,8 +190,10 @@ export default function useDisplayModel(forceScreen) {
         saturdayTzeit72: value(zSat)?.times?.tzeit72min,
         fridaySunset: value(zFri)?.times?.sunset,
       });
-      const parashaItem = value(p)?.items?.find((it) => it.category === 'parashat');
-      setParasha(parashaItem?.hebrew || '');
+      // Matched to `saturday` by calendar date, off the same response shabbatAnchors just read
+      // — so the name and the times beside it can only ever describe the same Shabbat. Empty
+      // string on a Shabbat with no parasha, which the two cards render as their own fallback.
+      setParasha(parashaAt(value(p), saturday));
     };
     load();
     const id = setInterval(load, ZMANIM_REFRESH_MS);

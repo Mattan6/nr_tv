@@ -69,9 +69,16 @@ export const getHebrewDate = async (date = new Date()) => {
  *   a literal default here: the legacy callers below pass no argument, and a second
  *   copy of the number would let them silently diverge from the display the first
  *   time the config changed.
+ * @param {Date} [date] - The day whose Shabbat to ask about. Hebcal answers with the block for
+ *   the week containing it: the coming Saturday when asked Sunday through Friday, and that same
+ *   Saturday when asked on Saturday itself — which is what keeps the board off next week's
+ *   parasha while this Shabbat is still on the wall. Should be an Israel-anchored Date
+ *   (displayData's `israelToday`), because its calendar fields are read below. Omitted, Hebcal
+ *   falls back to its own server clock deciding which week the request landed in — the one date
+ *   on this board that was not Israel's. The legacy callers below still take that path.
  * @returns {Promise} Parasha information
  */
-export const getParasha = async (candleLightingMin = SHABBAT_CONFIG.candleLightingMinBeforeSunset) => {
+export const getParasha = async (candleLightingMin = SHABBAT_CONFIG.candleLightingMinBeforeSunset, date) => {
   try {
     const response = await axios.get(`${HEBCAL_API_URL}/shabbat`, {
       params: {
@@ -86,6 +93,14 @@ export const getParasha = async (candleLightingMin = SHABBAT_CONFIG.candleLighti
         // (SHABBAT_CONFIG.arvitBefore), and removing it would move that posted time.
         M: 'on',
         b: candleLightingMin,
+        // Israel's calendar day, split the way /shabbat takes it — gy/gm/gd, not the single
+        // `date` string /zmanim accepts. Local getters, not toISOString(): `israelToday` bakes
+        // Israel's fields into a local-noon Date, so building and reading back in the same zone
+        // are exact inverses, while toISOString() would answer in UTC and slide the day
+        // backwards on any device west of Greenwich. Same trick as displayData's localYmd.
+        ...(date instanceof Date && !Number.isNaN(date.getTime())
+          ? { gy: date.getFullYear(), gm: date.getMonth() + 1, gd: date.getDate() }
+          : {}),
       },
     });
     return response.data;

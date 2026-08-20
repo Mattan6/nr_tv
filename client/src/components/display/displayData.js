@@ -359,13 +359,24 @@ function localYmd(d) {
 // 5786 returns 1 Apr 18:40 and 3 Apr 18:42, and Shabbat is the 4th. Items are
 // therefore matched to the actual Friday/Saturday of `saturday`, by local calendar
 // date, and a missing item yields null rather than someone else's time.
+// One item off a Hebcal /shabbat response: the one in `category` falling on local calendar
+// date `ymd`, or undefined. Shared by shabbatAnchors and parashaAt so the two readers of the
+// same response cannot drift apart on what "belongs to this Shabbat" means.
+//
+// Ten characters, because Hebcal mixes two date formats in one array: `candles` and `havdalah`
+// carry an offset-stamped timestamp ('2026-08-21T18:58:00+03:00'), `parashat` carries a bare
+// '2026-08-22'. The prefix is the calendar date in both.
+function itemOn(items, category, ymd) {
+  return items.find(
+    (it) => it.category === category && typeof it.date === 'string' && it.date.slice(0, 10) === ymd
+  );
+}
+
 export function shabbatAnchors(shabbatResponse, saturday) {
   const empty = { candles: null, havdalah: null };
   if (!(saturday instanceof Date) || Number.isNaN(saturday.getTime())) return empty;
   const items = shabbatResponse?.items || [];
-  const on = (category, ymd) =>
-    items.find((it) => it.category === category && typeof it.date === 'string' && it.date.slice(0, 10) === ymd)
-      ?.date || null;
+  const on = (category, ymd) => itemOn(items, category, ymd)?.date || null;
   const satYmd = localYmd(saturday);
   // Noon, so the subtraction can't be nudged across midnight by a DST shift.
   const friYmd = localYmd(new Date(saturday.getFullYear(), saturday.getMonth(), saturday.getDate() - 1, 12));
@@ -378,6 +389,23 @@ export function shabbatAnchors(shabbatResponse, saturday) {
     // מוצ״ש hour, so that night's candle lighting is the anchor.
     havdalah: on('havdalah', satYmd) || on('candles', satYmd),
   };
+}
+
+// The parasha name for the Shabbat of `saturday`, off the same /shabbat response the anchors
+// above come from — matched to the day by calendar date, exactly as they are.
+//
+// Anchored rather than taken with a bare items.find() so the name cannot describe a different
+// Shabbat than the times printed beside it. Every other date on this board is derived from
+// Israel's calendar (israelToday, upcomingSaturday, shabbatFriday, netzPrayerDate); before
+// this, the parasha alone was whichever parashat item happened to come first in whatever week
+// Hebcal's own server clock decided the request landed in.
+//
+// Empty string, never null, on a Shabbat with no parasha — the festival Shabbatot, where
+// Hebcal returns candles and havdalah with nothing between them. ShabbatDisplay renders that
+// as 'שַׁבַּת קֹדֶשׁ' and DedicationCard as 'לוּחַ הַשַּׁבָּת'; parashaHighlights falls back on it too.
+export function parashaAt(shabbatResponse, saturday) {
+  if (!(saturday instanceof Date) || Number.isNaN(saturday.getTime())) return '';
+  return itemOn(shabbatResponse?.items || [], 'parashat', localYmd(saturday))?.hebrew || '';
 }
 
 // Adds minutes to an 'HH:MM' string.
