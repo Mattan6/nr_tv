@@ -247,21 +247,31 @@ export function weekdayName(date, { bare = false } = {}) {
   }
 }
 
-// How far ahead the שופר card is willing to count.
+// Inside a day the שופר card counts in HH:MM:SS, as the design draws it. Beyond one it counts
+// in days.
 //
-// countdownTo will happily return '574:43:29', and it is not wrong — that is how far away
-// תקיעת שופר is when the board is previewed three weeks early. It is just not a countdown any
-// more; nobody reads 574 hours as a duration. Past the window the card shows the time alone,
-// which is the useful half, and the counter reappears on the night before.
+// countdownTo answers '574:43:29' three weeks out, which is accurate and unreadable — nobody
+// parses 574 hours as a duration. An earlier version simply hid the counter past 24 hours,
+// which turned out to be the wrong call on a board that goes up weeks before the חג: "בעוד
+// 22 ימים" is exactly what a congregant wants from it in אלול, and the seconds are what he
+// wants on the morning itself.
 export const COUNTDOWN_WINDOW_HOURS = 24;
 
-// The שופר card's counter, or '' when there is nothing worth counting: no row, no time, the
-// שופר already blown, or the חג still weeks out. One place decides, so the card only has to
-// ask whether the string is empty.
+// The שופר card's counter, or '' when there is nothing to count — no row, no time, or the
+// שופר already blown. One place decides, so the card only has to ask whether it is empty.
 export function shofarCountdown(now, targetDate, clock) {
   const raw = countdownTo(now, targetDate, clock);
   if (raw === '--:--:--' || raw === '00:00:00') return '';
-  return Number(raw.split(':')[0]) < COUNTDOWN_WINDOW_HOURS ? raw : '';
+
+  const hours = Number(raw.split(':')[0]);
+  if (hours < COUNTDOWN_WINDOW_HOURS) return raw;
+
+  // Whole days remaining, floored: at 47 hours it reads יומיים, which is the honest reading of
+  // "how many more days until". Hebrew has a dual, so two is יומיים and never '2 ימים'.
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'יום אחד';
+  if (days === 2) return 'יומיים';
+  return `${days} ימים`;
 }
 
 const SANS = "'Assistant',sans-serif";

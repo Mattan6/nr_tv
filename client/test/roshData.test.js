@@ -201,15 +201,24 @@ test('yields a placeholder rather than a wrong number when it cannot know', () =
 // תקיעת שופר is when the board is previewed three weeks early. It is just not a countdown any
 // more, so the card gets an empty string and shows the time alone.
 
-test('counts only inside the last day before the שופר', () => {
+test('counts in HH:MM:SS inside the last day', () => {
   const target = new Date(2026, 8, 13, 12);
 
   assert.equal(shofarCountdown(new Date('2026-09-13T04:45:00Z'), target, '09:45'), '02:00:00');
-  // 23:59 out — still a countdown.
+  // 23:59 out — still to the second.
   assert.equal(shofarCountdown(new Date('2026-09-12T06:46:00Z'), target, '09:45'), '23:59:00');
-  // Exactly 24h out, and three weeks out — both give the card nothing to print.
-  assert.equal(shofarCountdown(new Date('2026-09-12T06:45:00Z'), target, '09:45'), '');
-  assert.equal(shofarCountdown(new Date('2026-08-20T06:45:00Z'), target, '09:45'), '');
+});
+
+// The board goes up weeks before the חג, so the counter has to stay useful there. Seconds are
+// what a congregant wants on the morning itself; days are what he wants in אלול.
+test('counts in days beyond one, with Hebrew’s dual for two', () => {
+  const target = new Date(2026, 8, 13, 12);
+
+  assert.equal(shofarCountdown(new Date('2026-09-12T06:45:00Z'), target, '09:45'), 'יום אחד');
+  assert.equal(shofarCountdown(new Date('2026-09-11T06:45:00Z'), target, '09:45'), 'יומיים');
+  assert.equal(shofarCountdown(new Date('2026-09-10T06:45:00Z'), target, '09:45'), '3 ימים');
+  // Three weeks out, which is when the board first goes on the wall. 20 Aug to 13 Sep is 24.
+  assert.equal(shofarCountdown(new Date('2026-08-20T06:45:00Z'), target, '09:45'), '24 ימים');
 });
 
 test('is blank once the שופר has been blown, and when there is nothing to count', () => {

@@ -13,7 +13,10 @@ const RoshTicker = ({ items }) => {
   return (
     <div
       style={{
-        height: '52px',
+        // 44 rather than the other two boards' 52: the eight lines of chrome below this board's
+        // main grid were costing the day lists their row spacing, and a marquee reads the same
+        // at either height. See RoshDisplay.
+        height: '44px',
         flex: 'none',
         background: 'linear-gradient(90deg,#f0e2c4,#faf3e2,#f0e2c4)',
         borderTop: '1px solid rgba(176,135,63,0.45)',

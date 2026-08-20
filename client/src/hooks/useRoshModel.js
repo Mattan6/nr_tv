@@ -138,7 +138,10 @@ export default function useRoshModel() {
   const shofarHit = findKind('shofar');
   const shofar = shofarHit
     ? {
-        label: [`יום ${shofarHit.ordinal} דחג`, shofarHit.row.chazan].filter(Boolean).join(' · '),
+        // The day only. The row's detail field — the בעל תוקע — is deliberately NOT carried
+        // onto the card: it is already on the row in the day list two cards below, and the
+        // card's job is the when, not the who.
+        label: `יום ${shofarHit.ordinal} דחג`,
         time: shofarHit.row.time || '',
         // '' unless there is something worth counting — see shofarCountdown. The card just
         // asks whether the string is empty.

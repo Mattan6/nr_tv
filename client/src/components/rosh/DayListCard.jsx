@@ -6,16 +6,18 @@ import { WreathIcon } from './icons';
 // Rows arrive pre-decorated with a `style` from rowStyle(kind); this component never looks at
 // the row's NAME. That is the whole point of the kind field: the mockup picked these colours
 // by running regexes over the Hebrew, which breaks the moment a row is reworded.
+// The card's chrome — padding, title, sub and divider — is trimmed from the mockup's, and every
+// pixel of it goes to the rows. See RoshDisplay for the whole budget.
 const DayListCard = ({ title, sub, rows }) => (
-  <div style={CARD}>
+  <div style={{ ...CARD, padding: '11px 22px 8px' }}>
     <div style={{ textAlign: 'center' }}>
-      <div style={{ fontFamily: SERIF, fontWeight: 900, fontSize: '27px', color: C.pomegranate }}>{title}</div>
-      <div style={{ fontSize: '24px', fontWeight: 600, color: C.gold, letterSpacing: '2px' }}>{sub}</div>
+      <div style={{ fontFamily: SERIF, fontWeight: 900, fontSize: '25px', color: C.pomegranate }}>{title}</div>
+      <div style={{ fontSize: '21px', fontWeight: 600, color: C.gold, letterSpacing: '2px' }}>{sub}</div>
     </div>
 
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '8px 0 4px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0 2px' }}>
       <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg,transparent,rgba(176,135,63,0.6))' }} />
-      <WreathIcon />
+      <WreathIcon size={18} />
       <div style={{ flex: 1, height: '1px', background: 'linear-gradient(270deg,transparent,rgba(176,135,63,0.6))' }} />
     </div>
 

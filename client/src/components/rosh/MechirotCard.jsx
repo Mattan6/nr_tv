@@ -36,10 +36,11 @@ const MechirotCard = ({ rows, dayLabel, pageIndex, pageCount }) => (
       <div style={{ width: '60px', height: '1px', background: 'linear-gradient(270deg,transparent,rgba(176,135,63,0.6))' }} />
     </div>
 
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '3px' }}>
-      <div style={{ fontFamily: SERIF, fontSize: '24px', fontWeight: 700, color: C.pomegranate }}>{dayLabel}</div>
-      <div style={{ width: '5px', height: '5px', transform: 'rotate(45deg)', background: C.gold }} />
-      <div style={{ fontSize: '24px', color: C.inkMuted }}>סדר המכירה</div>
+    {/* The day alone. 'סדר המכירה' used to follow it and has been dropped: the card is already
+        titled מְכִירַת הַמִּצְווֹת and the rows are already numbered, so the phrase said nothing
+        the reader could not see — and it cost a line the rows needed. */}
+    <div style={{ textAlign: 'center', marginTop: '3px' }}>
+      <div style={{ fontFamily: SERIF, fontSize: '23px', fontWeight: 700, color: C.pomegranate }}>{dayLabel}</div>
     </div>
 
     {/* Keyed on the page so each turn re-mounts and replays the fade. This one DOES ride the
@@ -49,8 +50,10 @@ const MechirotCard = ({ rows, dayLabel, pageIndex, pageCount }) => (
       key={pageIndex}
       style={{
         display: 'grid',
+        // 1fr tracks, so the rows divide the card however many of them this page holds — a
+        // four-row page and a five-row page both fill it, which is what keeps the dot strip
+        // pinned to the bottom instead of sliding about as the pages turn.
         gridAutoRows: 'minmax(0,1fr)',
-        alignContent: 'start',
         flex: 1,
         minHeight: 0,
         overflow: 'hidden',
@@ -78,11 +81,16 @@ const MechirotCard = ({ rows, dayLabel, pageIndex, pageCount }) => (
             }}
           >
             {/* The position in this day's running order — derived at render by mechirotPages,
-                so inserting a מצווה renumbers the rest for free. */}
+                so inserting a מצווה renumbers the rest for free.
+
+                This whole row runs smaller than the day lists beside it, and deliberately: a
+                מכירה row carries three things where a prayer row carries two, and the badge is
+                the longest string on the board. At the day lists' 26px the three of them
+                crowded each other and the badge pushed the label into an ellipsis. */}
             <div
               style={{
-                width: '34px',
-                height: '34px',
+                width: '28px',
+                height: '28px',
                 flex: 'none',
                 display: 'flex',
                 alignItems: 'center',
@@ -91,25 +99,25 @@ const MechirotCard = ({ rows, dayLabel, pageIndex, pageCount }) => (
                 background: 'rgba(176,135,63,0.14)',
                 border: '1px solid rgba(176,135,63,0.5)',
                 fontFamily: SERIF,
-                fontSize: '24px',
+                fontSize: '19px',
                 fontWeight: 700,
                 color: C.pomegranate,
               }}
             >
               {item.num}
             </div>
-            <div style={{ fontSize: '26px', fontWeight: 600, color: C.ink, lineHeight: 1.1, flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '21px', fontWeight: 600, color: C.ink, lineHeight: 1.1, flex: 1, minWidth: 0 }}>
               {item.label}
             </div>
             <div
               style={{
-                fontSize: '24px',
+                fontSize: '17px',
                 fontWeight: 700,
                 color: badge.color,
                 background: badge.bg,
                 border: `1px solid ${badge.border}`,
                 borderRadius: '999px',
-                padding: '2px 13px',
+                padding: '2px 10px',
                 lineHeight: 1.2,
                 flex: 'none',
                 whiteSpace: 'nowrap',
