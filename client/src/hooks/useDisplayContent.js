@@ -21,12 +21,21 @@ const EMPTY_LISTS = {
   dedication: [],
   jokes: [],
   ticker: [],
+  // ראש השנה, on /tv?screen=rosh. Read only by hooks/useRoshModel.js — the חול and שבת boards
+  // never touch them — but they travel in the one document and carry the same isActive flag as
+  // everything else, so they need nothing here beyond a key.
+  roshDay1: [],
+  roshDay2: [],
+  roshMechirot: [],
+  roshDedication: [],
+  roshTicker: [],
 };
 
-// The שבת time overrides. A single record rather than a list — there is nothing to filter,
-// only to default, and it is defaulted rather than passed straight through because a
-// document cached before this feature existed carries no `settings` at all.
-const EMPTY_SETTINGS = { shabbat: {} };
+// The pinned time overrides, one group per board that has any. A single record rather than a
+// list — there is nothing to filter, only to default, and it is defaulted rather than passed
+// straight through because a document cached before either feature existed carries no
+// `settings` at all, and one cached between them carries no `rosh` inside it.
+const EMPTY_SETTINGS = { shabbat: {}, rosh: {} };
 
 const EMPTY = { ...EMPTY_LISTS, settings: EMPTY_SETTINGS };
 
@@ -35,7 +44,10 @@ const activeOnly = (doc) => ({
   ...Object.fromEntries(
     Object.keys(EMPTY_LISTS).map((key) => [key, (doc?.[key] || []).filter((it) => it.isActive)])
   ),
-  settings: { shabbat: doc?.settings?.shabbat || {} },
+  settings: {
+    shabbat: doc?.settings?.shabbat || {},
+    rosh: doc?.settings?.rosh || {},
+  },
 });
 
 const readCache = () => {
