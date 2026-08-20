@@ -179,6 +179,78 @@ test('a doc naming an image we never wrote is a 400 in Hebrew', async () => {
   assert.ok(body.errors.doc);
 });
 
+// --- Reordering a panel ------------------------------------------------------------
+//
+// The ordering trap the settings pair at the top of this file documents applies here too, and
+// harder: PUT /content/:panel/order must be declared before PUT /content/:panel/:id, or the
+// request lands in updateItem trying to edit an item whose id is 'order' and answers 404.
+// The first test below is what catches that if the declaration order is ever lost.
+
+test('PUT /api/content/:panel/order reaches the reorder handler, not updateItem', async () => {
+  const before = await (await fetch(`${base}/roshDay1`)).json();
+  const ids = before.map((it) => it.id);
+  const swapped = [ids[1], ids[0], ...ids.slice(2)];
+
+  const res = await send('PUT', `${base}/roshDay1/order`, { ids: swapped });
+  const body = await res.json();
+
+  assert.strictEqual(res.status, 200, 'expected the reorder handler, got the item 404 instead');
+  assert.deepStrictEqual(body.map((it) => it.id), swapped);
+
+  const after = await (await fetch(`${base}/roshDay1`)).json();
+  assert.deepStrictEqual(after.map((it) => it.id), swapped);
+  // The items themselves travelled intact — this reorders, it does not rebuild.
+  assert.strictEqual(after[0].name, before[1].name);
+  assert.strictEqual(after[0].chazan, before[1].chazan);
+});
+
+// A permutation check rather than a positional patch. Two admin tabs open on one phone is an
+// ordinary thing to happen, and an order computed against a list the server no longer holds
+// must be refused whole rather than partly applied.
+test('reorder refuses anything that is not a permutation, and writes nothing', async () => {
+  const before = await (await fetch(`${base}/roshDay1`)).json();
+  const ids = before.map((it) => it.id);
+
+  const rejected = [
+    ids.slice(1), // short
+    [ids[0], ids[0], ...ids.slice(2)], // a duplicate, which would clone one row over another
+    ['no-such-id', ...ids.slice(1)], // unknown
+    [...ids, ids[0]], // long
+  ];
+
+  for (const bad of rejected) {
+    const res = await send('PUT', `${base}/roshDay1/order`, { ids: bad });
+    assert.strictEqual(res.status, 400, `expected 400 for ${JSON.stringify(bad).slice(0, 40)}`);
+  }
+
+  const after = await (await fetch(`${base}/roshDay1`)).json();
+  assert.deepStrictEqual(after.map((it) => it.id), ids);
+});
+
+test('reorder rejects a missing or non-array ids field', async () => {
+  for (const body of [{}, { ids: 'a,b' }, { ids: null }, undefined]) {
+    assert.strictEqual((await send('PUT', `${base}/roshDay1/order`, body)).status, 400);
+  }
+});
+
+test('reorder on an unknown panel is a 404', async () => {
+  assert.strictEqual((await send('PUT', `${base}/parnas/order`, { ids: [] })).status, 404);
+});
+
+test('reorder works on any panel, not just the חג ones', async () => {
+  const before = await (await fetch(`${base}/roshTicker`)).json();
+  const reversed = before.map((it) => it.id).reverse();
+
+  const res = await send('PUT', `${base}/roshTicker/order`, { ids: reversed });
+
+  assert.strictEqual(res.status, 200);
+  assert.deepStrictEqual(
+    (await (await fetch(`${base}/roshTicker`)).json()).map((it) => it.id),
+    reversed
+  );
+});
+
+
 // Placed last deliberately: it fills a panel to MAX_ITEMS, which would break any
 // later test that expects to create in the same panel.
 test('POST refuses to add to a panel already at MAX_ITEMS', async () => {

@@ -10,6 +10,10 @@ const { sweepOrphans } = require('../store/uploads');
 // controller maps it to a 400, same as any other validation failure.
 class ItemLimitError extends Error {}
 
+// A mutator throws this when the posted id list is not a permutation of the panel's current
+// items; the controller maps it to a 400, same as any other validation failure.
+class ReorderError extends Error {}
+
 // Wraps a handler so panel validation, NotFoundError and unexpected failures are
 // handled once instead of five times.
 const handler = (fn) => async (req, res, next) => {
@@ -24,6 +28,9 @@ const handler = (fn) => async (req, res, next) => {
     }
     if (err instanceof ItemLimitError) {
       return res.status(400).json({ message: `אי אפשר להוסיף יותר מ-${MAX_ITEMS} פריטים בפאנל זה` });
+    }
+    if (err instanceof ReorderError) {
+      return res.status(400).json({ message: 'סדר לא תקין' });
     }
     next(err);
   }
@@ -99,6 +106,42 @@ const deleteItem = handler(async (req, res) => {
 // handlers instead of going through the panel routes above. `handler` still wraps them —
 // its panel check is skipped because these routes carry no :panel param.
 
+// Reorders a panel by posting its ids in the order they should be stored.
+//
+// The whole list, rather than "move item X up one". Two admin tabs open on one phone is an
+// ordinary thing to happen, and a positional patch computed against a list one of them has
+// not seen can drop or duplicate a row silently. A permutation either describes the list the
+// server actually holds or it does not — and if it does not, nothing is written at all.
+//
+// Order is the panel's own data here, not a field on an item: it is what the display renders
+// in, and for the ראש השנה day lists it is the order of the davening.
+const reorderPanel = handler(async (req, res) => {
+  const { panel } = req.params;
+  const ids = req.body == null ? undefined : req.body.ids;
+  if (!Array.isArray(ids)) return res.status(400).json({ message: 'רשימת מזהים חסרה' });
+
+  const reordered = await contentStore.update((draft) => {
+    const current = draft[panel];
+    if (ids.length !== current.length) throw new ReorderError();
+
+    const remaining = new Map(current.map((it) => [it.id, it]));
+    const next = [];
+    for (const id of ids) {
+      const item = remaining.get(id);
+      if (!item) throw new ReorderError();
+      // Consumed as we go, so a repeated id fails on its second visit rather than quietly
+      // cloning one row over a dropped one.
+      remaining.delete(id);
+      next.push(item);
+    }
+
+    draft[panel] = next;
+    return next;
+  });
+
+  res.json(reordered);
+});
+
 const getSettings = handler(async (req, res) => {
   const doc = await contentStore.read();
   res.json(doc.settings);
@@ -122,4 +165,13 @@ const updateSettings = handler(async (req, res) => {
   res.json(saved);
 });
 
-module.exports = { getContent, getPanel, createItem, updateItem, deleteItem, getSettings, updateSettings };
+module.exports = {
+  getContent,
+  getPanel,
+  createItem,
+  updateItem,
+  deleteItem,
+  reorderPanel,
+  getSettings,
+  updateSettings,
+};

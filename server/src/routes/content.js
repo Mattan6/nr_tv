@@ -5,6 +5,7 @@ const {
   createItem,
   updateItem,
   deleteItem,
+  reorderPanel,
   getSettings,
   updateSettings,
 } = require('../controllers/contentController');
@@ -23,6 +24,11 @@ router.put('/settings', updateSettings);
 router.get('/', getContent);
 router.get('/:panel', getPanel);
 router.post('/:panel', createItem);
+// Declared BEFORE '/:panel/:id', and for exactly the reason the /settings pair above is
+// declared before '/:panel'. Express matches in declaration order, so a
+// PUT /content/roshDay1/order that reached updateItem would try to edit an item whose id is
+// 'order' and answer 404. Moving this line below the next one is a silent breakage.
+router.put('/:panel/order', reorderPanel);
 router.put('/:panel/:id', updateItem);
 router.delete('/:panel/:id', deleteItem);
 
