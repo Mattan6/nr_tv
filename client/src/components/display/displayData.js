@@ -345,7 +345,11 @@ export function netzPrayerDate(now) {
 // comparing against the first ten characters of a Hebcal timestamp. Built from the
 // date's own fields rather than toISOString(), which would answer in UTC and slide a
 // day backwards for anything before 02:00/03:00 local.
-function localYmd(d) {
+//
+// Exported for components/rosh/roshData.js, which matches Hebcal's holiday items to dates
+// exactly as shabbatAnchors below matches its candle items. Four lines would be cheap to
+// write a second time, and that is precisely how the two would drift.
+export function localYmd(d) {
   const pad2 = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }

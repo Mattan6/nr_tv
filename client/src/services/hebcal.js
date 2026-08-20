@@ -111,6 +111,56 @@ export const getParasha = async (candleLightingMin = SHABBAT_CONFIG.candleLighti
 };
 
 /**
+ * Major holidays in a window, with the candle lighting and הבדלה times that bracket each of
+ * them, for Nitzan.
+ *
+ * ONE request serves every חג board: ראש השנה today, and יום כיפור, סוכות, פסח and שבועות when
+ * they are built. `holidayAnchors` in components/rosh/roshData.js picks one חג out of the
+ * response by title and length.
+ *
+ * Deliberately WITHOUT `lg=he`, unlike every other call in this module. Nothing here is ever
+ * displayed — only the dates and times are read, and all the board's Hebrew is our own — while
+ * `lg=he` rewrites `title` into pointed Hebrew ('רֹאשׁ הַשָּׁנָה 5787'), turning the one field
+ * the matcher keys on into display copy that a locale change could move.
+ *
+ * @param {Date} from - first day of the window. Should be Israel-anchored (displayData's
+ *   `israelToday`), because its local calendar fields are read here — the same convention
+ *   getParasha's `date` follows.
+ * @param {number} days - length of the window in days.
+ * @returns {Promise} The /hebcal response, items and all
+ */
+export const getHolidayCalendar = async (from, days) => {
+  const end = new Date(from.getFullYear(), from.getMonth(), from.getDate() + days, 12, 0, 0, 0);
+  try {
+    const response = await axios.get(`${HEBCAL_API_URL}/hebcal`, {
+      params: {
+        v: 1,
+        cfg: 'json',
+        maj: 'on', // major holidays...
+        c: 'on', // ...with their candle lighting
+        // Israel's scheme. Immaterial for ראש השנה, which is two days everywhere; it is here
+        // for סוכות and פסח, which are not.
+        i: 'on',
+        // הבדלה at nightfall and הדלקת נרות at the same offset the שבת board asks for, so the
+        // two boards can never post two different candle-lighting rules.
+        M: 'on',
+        b: SHABBAT_CONFIG.candleLightingMinBeforeSunset,
+        geo: 'pos',
+        latitude: LOCATION.latitude,
+        longitude: LOCATION.longitude,
+        tzid: LOCATION.tzid,
+        start: format(from, 'yyyy-MM-dd'),
+        end: format(end, 'yyyy-MM-dd'),
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching holiday calendar:', error);
+    throw error;
+  }
+};
+
+/**
  * Get holidays and special days
  * @returns {Promise} Holidays for current Hebrew year
  */
@@ -167,6 +217,7 @@ export default {
   getZmanim,
   getHebrewDate,
   getParasha,
+  getHolidayCalendar,
   getHolidays,
   getOmerCount,
 };
