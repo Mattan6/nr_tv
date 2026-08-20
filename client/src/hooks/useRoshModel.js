@@ -8,7 +8,7 @@ import {
   holidayAnchors,
   resolveRoshTimes,
   mechirotPages,
-  countdownTo,
+  shofarCountdown,
   rowStyle,
   hebrewYearOf,
   weekdayName,
@@ -140,9 +140,11 @@ export default function useRoshModel() {
     ? {
         label: [`יום ${shofarHit.ordinal} דחג`, shofarHit.row.chazan].filter(Boolean).join(' · '),
         time: shofarHit.row.time || '',
-        countdown: countdownTo(now, shofarHit.date, shofarHit.row.time),
+        // '' unless there is something worth counting — see shofarCountdown. The card just
+        // asks whether the string is empty.
+        countdown: shofarCountdown(now, shofarHit.date, shofarHit.row.time),
       }
-    : { label: '', time: '', countdown: '--:--:--' };
+    : { label: '', time: '', countdown: '' };
 
   const tashlichHit = findKind('tashlich');
   const tashlichWeekday = tashlichHit ? weekdayName(tashlichHit.date) : '';

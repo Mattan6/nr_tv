@@ -188,3 +188,17 @@ body::before {
   0%, 100% { transform: scale(1);                  opacity: .95; }
   50%      { transform: scale(1.12) translateY(-1.5px); opacity: 1; }
 }
+
+/* The ראש השנה board (pages/RoshDisplay.jsx). It reuses omFade and omTicker above — the
+   mockup's own fade and marquee are those two, to the keyframe — and needs only these:
+   the sunrise glow behind the masthead and the pair of drifting שופרות flanking it.
+   omRoshSunrise is close to omGlowSoft but not identical, and is kept separate rather than
+   folded into it: these are the opacities the board was designed and approved at. */
+@keyframes omRoshSunrise {
+  0%, 100% { opacity: .55; transform: translateX(-50%) scale(1); }
+  50%      { opacity: .9;  transform: translateX(-50%) scale(1.05); }
+}
+@keyframes omShofar {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50%      { transform: translateY(-6px) rotate(-3deg); }
+}

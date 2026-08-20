@@ -1,5 +1,6 @@
 import SynagogueDisplay from './SynagogueDisplay';
 import ShabbatDisplay from './ShabbatDisplay';
+import RoshDisplay from './RoshDisplay';
 import KeepAwake from '../components/KeepAwake';
 import NightlyReload from '../components/NightlyReload';
 import useScheduledScreen from '../hooks/useScheduledScreen';
@@ -41,9 +42,19 @@ const TV_SAFE_AREA = { x: 0.04, y: 0.03 };
 // running the Shabbat prayer list, not the weekday one. That is the one combination this query
 // param cannot preview in isolation, and it is correct: SynagogueDisplay never stops following
 // the calendar just because a URL asked to see it.
+//
+// `?screen=rosh` is the third value, and the only one that is not a preview at all. The other
+// two show a board the schedule would have reached on its own; ראש השנה is never on the
+// schedule — useScheduledScreen answers 'weekday' or 'shabbat' and nothing else — so typing
+// the address is the ONLY way to reach that board, by design. The gabbai switches the set to
+// it when the חג comes in, and a plain /tv reload afterwards restores the schedule.
+//
+// Keeping it off the calendar is also the only correct answer for תשפ״ז: יום א׳ דראש השנה
+// falls on Shabbat, so a schedule rule would have the חג board and the שבת board both claiming
+// one Saturday. It pins layout AND content, like ?screen=shabbat.
 const previewScreen = () => {
   const value = new URLSearchParams(window.location.search).get('screen');
-  return value === 'shabbat' || value === 'weekday' ? value : null;
+  return value === 'shabbat' || value === 'weekday' || value === 'rosh' ? value : null;
 };
 
 const TvDisplay = () => {
@@ -63,7 +74,9 @@ const TvDisplay = () => {
           KeepAwake removes the sleep/wake cycles that used to do it by accident. Same one
           import site rule: a phone must never reload under the reader. */}
       <NightlyReload />
-      {screen === 'shabbat' ? (
+      {screen === 'rosh' ? (
+        <RoshDisplay safeArea={TV_SAFE_AREA} />
+      ) : screen === 'shabbat' ? (
         <ShabbatDisplay safeArea={TV_SAFE_AREA} />
       ) : (
         <SynagogueDisplay safeArea={TV_SAFE_AREA} showToggle={false} />

@@ -6,6 +6,7 @@ import {
   resolveRoshTimes,
   mechirotPages,
   countdownTo,
+  shofarCountdown,
   rowStyle,
   hebrewYearLetters,
   hebrewYearOf,
@@ -192,6 +193,31 @@ test('yields a placeholder rather than a wrong number when it cannot know', () =
   assert.equal(countdownTo(new Date(), new Date(2026, 8, 13, 12), undefined), '--:--:--');
   assert.equal(countdownTo(new Date(), new Date('nonsense'), '09:45'), '--:--:--');
   assert.equal(countdownTo(new Date(), new Date(2026, 8, 13, 12), '9:45 pm'), '--:--:--');
+});
+
+// --- shofarCountdown -----------------------------------------------------------------
+//
+// countdownTo is happy to answer '574:43:29', and it is not wrong — that is genuinely how far
+// תקיעת שופר is when the board is previewed three weeks early. It is just not a countdown any
+// more, so the card gets an empty string and shows the time alone.
+
+test('counts only inside the last day before the שופר', () => {
+  const target = new Date(2026, 8, 13, 12);
+
+  assert.equal(shofarCountdown(new Date('2026-09-13T04:45:00Z'), target, '09:45'), '02:00:00');
+  // 23:59 out — still a countdown.
+  assert.equal(shofarCountdown(new Date('2026-09-12T06:46:00Z'), target, '09:45'), '23:59:00');
+  // Exactly 24h out, and three weeks out — both give the card nothing to print.
+  assert.equal(shofarCountdown(new Date('2026-09-12T06:45:00Z'), target, '09:45'), '');
+  assert.equal(shofarCountdown(new Date('2026-08-20T06:45:00Z'), target, '09:45'), '');
+});
+
+test('is blank once the שופר has been blown, and when there is nothing to count', () => {
+  const target = new Date(2026, 8, 13, 12);
+
+  assert.equal(shofarCountdown(new Date('2026-09-13T08:00:00Z'), target, '09:45'), '');
+  assert.equal(shofarCountdown(new Date(), null, '09:45'), '');
+  assert.equal(shofarCountdown(new Date(), target, ''), '');
 });
 
 // --- rowStyle ------------------------------------------------------------------------

@@ -247,6 +247,23 @@ export function weekdayName(date, { bare = false } = {}) {
   }
 }
 
+// How far ahead the שופר card is willing to count.
+//
+// countdownTo will happily return '574:43:29', and it is not wrong — that is how far away
+// תקיעת שופר is when the board is previewed three weeks early. It is just not a countdown any
+// more; nobody reads 574 hours as a duration. Past the window the card shows the time alone,
+// which is the useful half, and the counter reappears on the night before.
+export const COUNTDOWN_WINDOW_HOURS = 24;
+
+// The שופר card's counter, or '' when there is nothing worth counting: no row, no time, the
+// שופר already blown, or the חג still weeks out. One place decides, so the card only has to
+// ask whether the string is empty.
+export function shofarCountdown(now, targetDate, clock) {
+  const raw = countdownTo(now, targetDate, clock);
+  if (raw === '--:--:--' || raw === '00:00:00') return '';
+  return Number(raw.split(':')[0]) < COUNTDOWN_WINDOW_HOURS ? raw : '';
+}
+
 const SANS = "'Assistant',sans-serif";
 const SERIF = "'Frank Ruhl Libre',serif";
 
