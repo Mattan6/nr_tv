@@ -250,3 +250,98 @@ test('backfilled keys survive the next write', async (t) => {
   const written = JSON.parse(await fs.readFile(file, 'utf8'));
   assert.strictEqual(written.ticker.length, DEFAULT_CONTENT.ticker.length);
 });
+
+// --- ראש השנה ---------------------------------------------------------------------
+//
+// Five more BACKFILL_KEYS, and the first ones whose seed is deliberately NON-empty.
+//
+// That is not a reversal of the rule shiurimShabbat and dedication follow. Those two are
+// empty because there is no honest value to INVENT — a seeded dedication is a stranger's
+// family name on someone's wall. These five hold this shul's own schedule, written and
+// corrected by the gabbai in the board's mockup before a line of it was implemented. The
+// absent/empty distinction is untouched: a file that predates the feature is filled from the
+// seed, and a list the gabbai emptied on purpose stays empty.
+
+test('a document written before ראש השנה existed gains all five panels', async (t) => {
+  const { store, file } = await tmpStore(t);
+  const legacy = structuredClone(DEFAULT_CONTENT);
+  for (const key of ['roshDay1', 'roshDay2', 'roshMechirot', 'roshDedication', 'roshTicker']) {
+    delete legacy[key];
+  }
+  await fs.writeFile(file, JSON.stringify(legacy), 'utf8');
+
+  const doc = await store.read();
+
+  assert.strictEqual(doc.roshDay1.length, 11);
+  assert.strictEqual(doc.roshDay2.length, 10);
+  assert.strictEqual(doc.roshMechirot.length, 18);
+  assert.strictEqual(doc.roshDedication.length, 1);
+  assert.strictEqual(doc.roshTicker.length, 5);
+  // The real content survived: the document was not treated as wrong-shaped.
+  assert.strictEqual(doc.announcements.length, DEFAULT_CONTENT.announcements.length);
+});
+
+// `settings` already exists in every file written since the שבת times feature, so the
+// BACKFILL_KEYS loop skips it wholesale and would never notice that `settings.rosh` inside it
+// is missing. Backfilled per group, for the same reason validateSettings merges per group.
+test('a document with settings but no rosh group gains one', async (t) => {
+  const { store, file } = await tmpStore(t);
+  const legacy = structuredClone(DEFAULT_CONTENT);
+  delete legacy.settings.rosh;
+  await fs.writeFile(file, JSON.stringify(legacy), 'utf8');
+
+  const doc = await store.read();
+
+  assert.deepStrictEqual(doc.settings.rosh, { candles1: '', candles2: '', havdalah: '' });
+  // And the שבת group it did have was not disturbed.
+  assert.deepStrictEqual(doc.settings.shabbat, DEFAULT_CONTENT.settings.shabbat);
+});
+
+test('a חג ticker the gabbai emptied stays empty', async (t) => {
+  const { store, file } = await tmpStore(t);
+  const legacy = structuredClone(DEFAULT_CONTENT);
+  legacy.roshTicker = [];
+  await fs.writeFile(file, JSON.stringify(legacy), 'utf8');
+
+  const doc = await store.read();
+
+  assert.strictEqual(doc.roshTicker.length, 0);
+});
+
+// The board derives its two highlight cards from the rows the gabbai marked — see ROW_KINDS
+// in store/panels.js. Exactly one row of each kind is seeded, because two would make "the
+// שופר row" ambiguous and none would leave the card blank on a fresh install.
+test('exactly one seeded row carries each of the two card-feeding kinds', () => {
+  const rows = [...DEFAULT_CONTENT.roshDay1, ...DEFAULT_CONTENT.roshDay2];
+
+  const shofar = rows.filter((r) => r.kind === 'shofar');
+  assert.strictEqual(shofar.length, 1);
+  assert.strictEqual(shofar[0].time, '09:45');
+
+  const tashlich = rows.filter((r) => r.kind === 'tashlich');
+  assert.strictEqual(tashlich.length, 1);
+  assert.strictEqual(tashlich[0].time, '17:00');
+});
+
+// Same reasoning as the announcements assertion near the top of this file: hard-coded
+// literals, so a well-meaning "cleanup" of the seed strings fails here rather than on the
+// wall. These came from the gabbai's own mockup and are not ours to tidy.
+test('the ראש השנה seed preserves its verbatim strings', () => {
+  assert.strictEqual(DEFAULT_CONTENT.roshDay1[10].chazan, 'בבית משפחת רחמין');
+  assert.strictEqual(DEFAULT_CONTENT.roshDay2[5].name, 'תקיעת שופר');
+  assert.strictEqual(DEFAULT_CONTENT.roshMechirot[4].label, 'עלייה · שלישי');
+  // Niqqud, deliberately: it is the board's typography, and the gabbai may type with or
+  // without it.
+  assert.strictEqual(DEFAULT_CONTENT.roshDedication[0].names, 'מִשְׁפַּחַת מַזּוּז');
+});
+
+// Ten on the first day and eight on the second, which is what makes the board's paging read
+// 4 + 4 + 2 then 4 + 4 — five pages, five dots.
+test('the מכירת מצוות seed splits ten and eight across the two days', () => {
+  const byDay = (day) => DEFAULT_CONTENT.roshMechirot.filter((m) => m.day === day);
+
+  assert.strictEqual(byDay('day1').length, 10);
+  assert.strictEqual(byDay('day2').length, 8);
+  assert.strictEqual(byDay('day1')[0].kind, 'general');
+  assert.strictEqual(byDay('day2')[0].kind, 'general');
+});

@@ -30,11 +30,38 @@ const PANEL_ARRAY_KEYS = ['announcements', 'shiurim', 'mazal', 'azkarot'];
 // both would put every weekday שיעור on the שבת board — the exact overlap the split exists to
 // remove. A dedication names a real family, so there is no value to seed that would not be
 // a stranger's name on someone's wall.
-const BACKFILL_KEYS = ['ticker', 'settings', 'shiurimShabbat', 'dedication'];
+//
+// The five ראש השנה keys are the newest members, and the first backfilled keys whose seed is
+// NON-empty. That does not reverse the paragraph above: shiurimShabbat and dedication are
+// empty because there is no honest value to invent, while the חג rows are this shul's own
+// schedule, written by the gabbai in the board's mockup. The absent/empty distinction is
+// untouched — a file predating the feature is filled, and a list emptied on purpose is left.
+const BACKFILL_KEYS = [
+  'ticker',
+  'settings',
+  'shiurimShabbat',
+  'dedication',
+  'roshDay1',
+  'roshDay2',
+  'roshMechirot',
+  'roshDedication',
+  'roshTicker',
+];
 
 function withDefaults(doc) {
   for (const key of BACKFILL_KEYS) {
     if (doc[key] === undefined) doc[key] = structuredClone(DEFAULT_CONTENT[key]);
+  }
+  // `settings` is one key holding one group per board, so the loop above sees it as present
+  // and stops there — it cannot notice that a group INSIDE it is missing. Every file written
+  // between the שבת times feature and the ראש השנה board is exactly that shape: it has
+  // `settings`, and no `settings.rosh` in it.
+  //
+  // Backfilled per group, which is the same unit validateSettings replaces and merges by.
+  for (const group of Object.keys(DEFAULT_CONTENT.settings)) {
+    if (doc.settings[group] === undefined) {
+      doc.settings[group] = structuredClone(DEFAULT_CONTENT.settings[group]);
+    }
   }
   return doc;
 }
