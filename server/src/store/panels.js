@@ -188,39 +188,76 @@ function validateItem(panel, body) {
   return { fields };
 }
 
-// The five שבת rows the gabbai may pin to a fixed time. Blank means "leave it
+// The rows the gabbai may pin to a fixed time, per board. Blank means "leave it
 // automatic" — the display computes that row from the zmanim instead.
 const SHABBAT_SETTING_KEYS = ['candles', 'kabbalat', 'shacharit', 'mincha', 'arvit'];
+// ראש השנה: הדלקת נרות of both nights and מוצאי החג. All three are pulled from Hebcal for
+// Nitzan by default, which is what the gabbai asked for; pinning one is the escape hatch.
+const ROSH_SETTING_KEYS = ['candles1', 'candles2', 'havdalah'];
+
+// One group per board that has pinnable times. A future חג board adds a line here and a
+// descriptor in the admin's timesMeta.js; nothing else in this file changes.
+const SETTING_GROUPS = {
+  shabbat: SHABBAT_SETTING_KEYS,
+  rosh: ROSH_SETTING_KEYS,
+};
 
 // Deliberately NOT expressed through PANELS/validateItem. That machinery is built around
 // `required`, whose whole job is to reject a blank — and here a blank is the single most
 // important valid value there is, because clearing a field is how an override is removed.
 // Bending validateItem to accept it would weaken the rule the four content panels rely on.
 //
-// Returns { settings } or { errors }, never both. Every key is present in the output
-// whether or not the body carried it, so a partial PUT cannot leave the stored record
-// half-shaped, and unknown keys are dropped rather than persisted.
+// Returns { settings } or { errors }, never both.
+//
+// THE GROUP IS THE UNIT OF REPLACEMENT, and the asymmetry between the two levels is the
+// whole design:
+//
+//   within a group  every key is present in the output whether or not the body carried it,
+//                   so a partial PUT cannot leave a group half-shaped and a blank really
+//                   does clear a pin — which is how "empty the field to go back to
+//                   automatic" works from the form;
+//   across groups   only the groups the body NAMED come back, and updateSettings merges
+//                   them over what is stored.
+//
+// Without the second half, every save on the זמני שבת screen would silently blank the חג
+// overrides: that form posts `{shabbat: …}` and nothing else, so a validator that always
+// emitted both groups would write a fresh empty `rosh` beside it.
+//
+// "Named" is an own-property check, not a truthiness one. `{shabbat: null}` names the group
+// and gets it blanked; a body with no `shabbat` key at all leaves the stored one alone. The
+// own-property test also keeps 'constructor' and 'toString' from reading as group names,
+// the same guard isPanel makes above.
+//
+// Unknown group keys, and unknown keys inside a group, are dropped rather than persisted.
 function validateSettings(body) {
-  const source = (body && typeof body.shabbat === 'object' && body.shabbat) || {};
-  const shabbat = {};
+  const settings = {};
   const errors = {};
+  const named = body !== null && typeof body === 'object';
 
-  for (const key of SHABBAT_SETTING_KEYS) {
-    const raw = source[key];
-    const value = typeof raw === 'string' ? raw.trim() : '';
+  for (const [group, keys] of Object.entries(SETTING_GROUPS)) {
+    if (!named || !Object.prototype.hasOwnProperty.call(body, group)) continue;
+    const raw = body[group];
+    const source = raw !== null && typeof raw === 'object' ? raw : {};
+    const values = {};
 
-    if (!value) {
-      shabbat[key] = '';
-      continue;
+    for (const key of keys) {
+      const value = typeof source[key] === 'string' ? source[key].trim() : '';
+
+      if (!value) {
+        values[key] = '';
+        continue;
+      }
+      if (!TIME_RE.test(value)) {
+        errors[key] = 'שעה חייבת להיות בפורמט 18:00';
+        continue;
+      }
+      values[key] = value;
     }
-    if (!TIME_RE.test(value)) {
-      errors[key] = 'שעה חייבת להיות בפורמט 18:00';
-      continue;
-    }
-    shabbat[key] = value;
+
+    settings[group] = values;
   }
 
-  return Object.keys(errors).length ? { errors } : { settings: { shabbat } };
+  return Object.keys(errors).length ? { errors } : { settings };
 }
 
 module.exports = {
@@ -229,5 +266,7 @@ module.exports = {
   validateItem,
   validateSettings,
   SHABBAT_SETTING_KEYS,
+  ROSH_SETTING_KEYS,
+  SETTING_GROUPS,
   MAX_ITEMS,
 };

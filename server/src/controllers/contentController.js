@@ -104,16 +104,20 @@ const getSettings = handler(async (req, res) => {
   res.json(doc.settings);
 });
 
-// A PUT replaces the whole record. validateSettings always returns all five keys, so a
-// body that omits one clears it rather than leaving a stale override behind — which is
-// what makes "empty the field to go back to automatic" work from the form.
+// A PUT replaces whole GROUPS, not the whole record.
+//
+// Within a group validateSettings always returns every key, so a body that omits one clears
+// it rather than leaving a stale override behind — which is what makes "empty the field to go
+// back to automatic" work from the form. But it returns only the groups the body named, and
+// they are spread over what is stored rather than assigned: there is a times screen per board
+// now, each posting its own group, and a save on one must never blank another's.
 const updateSettings = handler(async (req, res) => {
   const { settings, errors } = validateSettings(req.body);
   if (errors) return res.status(400).json({ message: 'שדות לא תקינים', errors });
 
   const saved = await contentStore.update((draft) => {
-    draft.settings = settings;
-    return settings;
+    draft.settings = { ...draft.settings, ...settings };
+    return draft.settings;
   });
   res.json(saved);
 });

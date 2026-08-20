@@ -253,6 +253,73 @@ test('PUT /api/content/settings rejects a malformed time with a field error', as
   assert.strictEqual((await (await fetch(`${base}/settings`)).json()).shabbat.mincha, '');
 });
 
+// --- Settings are grouped per board ------------------------------------------------
+//
+// `settings` holds one group per board that has pinnable times — `shabbat` and now `rosh`.
+// The group is the unit of replacement, and the asymmetry is the whole point:
+//
+//   within a group  every key is written whether or not the body carried it, so a blank
+//                   really does clear a pin (the two tests above rely on that);
+//   across groups   a group the body did not name is left exactly as it was.
+//
+// Without the second half every save on the זמני שבת screen would silently blank the חג
+// overrides, because that form posts `{shabbat: …}` and nothing else.
+
+test('a settings PUT carrying only shabbat leaves rosh untouched', async () => {
+  await send('PUT', `${base}/settings`, {
+    rosh: { candles1: '18:32', candles2: '19:28', havdalah: '19:27' },
+  });
+  await send('PUT', `${base}/settings`, {
+    shabbat: { candles: '18:05', kabbalat: '', shacharit: '', mincha: '', arvit: '' },
+  });
+
+  const after = await (await fetch(`${base}/settings`)).json();
+  assert.strictEqual(after.shabbat.candles, '18:05');
+  assert.strictEqual(after.rosh.candles1, '18:32');
+  assert.strictEqual(after.rosh.havdalah, '19:27');
+});
+
+test('a settings PUT carrying only rosh leaves shabbat untouched', async () => {
+  await send('PUT', `${base}/settings`, {
+    shabbat: { candles: '18:05', kabbalat: '', shacharit: '', mincha: '', arvit: '' },
+  });
+  await send('PUT', `${base}/settings`, {
+    rosh: { candles1: '', candles2: '', havdalah: '' },
+  });
+
+  const after = await (await fetch(`${base}/settings`)).json();
+  assert.strictEqual(after.shabbat.candles, '18:05');
+  assert.strictEqual(after.rosh.candles1, '');
+});
+
+test('within the rosh group a blank clears a pinned time', async () => {
+  await send('PUT', `${base}/settings`, {
+    rosh: { candles1: '18:32', candles2: '19:28', havdalah: '19:27' },
+  });
+  await send('PUT', `${base}/settings`, {
+    rosh: { candles1: '', candles2: '19:28', havdalah: '19:27' },
+  });
+
+  const after = await (await fetch(`${base}/settings`)).json();
+  assert.strictEqual(after.rosh.candles1, '');
+  assert.strictEqual(after.rosh.candles2, '19:28');
+});
+
+test('a malformed rosh time is a 400 and writes nothing', async () => {
+  await send('PUT', `${base}/settings`, {
+    rosh: { candles1: '18:32', candles2: '', havdalah: '' },
+  });
+
+  const res = await send('PUT', `${base}/settings`, {
+    rosh: { candles1: '6pm', candles2: '', havdalah: '' },
+  });
+  const body = await res.json();
+
+  assert.strictEqual(res.status, 400);
+  assert.ok(body.errors.candles1);
+  assert.strictEqual((await (await fetch(`${base}/settings`)).json()).rosh.candles1, '18:32');
+});
+
 // --- The dedication panel ---------------------------------------------------------
 //
 // Seeded empty, unlike every other panel — so this is also the one place the API's

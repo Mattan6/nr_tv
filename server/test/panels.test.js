@@ -168,8 +168,31 @@ test('rejects a malformed shabbat time', () => {
 
 test('treats a non-string shabbat value as blank rather than erroring', () => {
   assert.strictEqual(validateSettings({ shabbat: { candles: 42 } }).settings.shabbat.candles, '');
+  // The group is NAMED, so it is written — blanked, because there is nothing readable in it.
   assert.strictEqual(validateSettings({ shabbat: null }).settings.shabbat.candles, '');
-  assert.strictEqual(validateSettings(undefined).settings.shabbat.candles, '');
+});
+
+// The group is the unit of replacement: a group the body never named is left alone, so a save
+// from one board's times screen cannot blank another board's. A body naming nothing writes
+// nothing — which is why this asserts an empty object rather than a blanked שבת record, as it
+// did while `shabbat` was the only group there was.
+test('a group the body did not name is not returned at all', () => {
+  assert.deepStrictEqual(validateSettings({ shabbat: { candles: '18:00' } }).settings, {
+    shabbat: { candles: '18:00', kabbalat: '', shacharit: '', mincha: '', arvit: '' },
+  });
+  assert.deepStrictEqual(validateSettings({ rosh: { candles1: '18:32' } }).settings, {
+    rosh: { candles1: '18:32', candles2: '', havdalah: '' },
+  });
+  assert.deepStrictEqual(validateSettings(undefined).settings, {});
+  assert.deepStrictEqual(validateSettings({}).settings, {});
+  // Inherited Object properties must not read as group names.
+  assert.deepStrictEqual(validateSettings({ constructor: { candles: '18:00' } }).settings, {});
+});
+
+test('rejects a malformed rosh time', () => {
+  assert.ok(validateSettings({ rosh: { candles1: '25:00' } }).errors.candles1);
+  assert.ok(validateSettings({ rosh: { havdalah: '7pm' } }).errors.havdalah);
+  assert.strictEqual(validateSettings({ rosh: { candles2: '19:28' } }).errors, undefined);
 });
 
 test('strips keys outside the shabbat schema', () => {
