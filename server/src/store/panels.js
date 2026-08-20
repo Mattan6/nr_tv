@@ -25,6 +25,48 @@ const SHIUR_FIELDS = {
   by: { required: true },
 };
 
+// Lifted out of the `dedication` entry below so הקדשת לוח השבת and הקדשת לוח החג share one
+// definition, for the same reason SHIUR_FIELDS above is shared: one controller and one pair of
+// admin screens serve both lists, so a field that differed between them could only be a bug.
+const DEDICATION_FIELDS = {
+  lead: { required: true },
+  names: { required: true },
+  note: { required: false },
+};
+
+// The kinds a ראש השנה prayer row may carry.
+//
+// The board's mockup decided a row's treatment by running four regexes over its Hebrew NAME.
+// That is fine while the strings are fixed and wrong the moment the gabbai writes תקיעות שופר
+// instead of תקיעת שופר: the highlight silently vanishes and — worse — the תקיעת שופר card at
+// the top of the board goes blank, because the same regex is what finds the row it counts
+// down to. Storing the kind is what makes both stable under editing.
+//
+// `piyut` and `tashlich` render identically (the blue treatment). They are separate values
+// anyway, because only one of them feeds a card: עת שערי רצון must never be picked up as the
+// תשליך row. The mockup fused appearance with meaning; this is where they come apart.
+const ROW_KINDS = ['regular', 'shiur', 'shofar', 'tashlich', 'piyut', 'mechirot'];
+
+const MECHIRA_DAYS = ['day1', 'day2'];
+const MECHIRA_KINDS = ['auction', 'general'];
+
+// One schema, mounted as the two ראש השנה day panels.
+//
+// `time` is optional, and that is load-bearing rather than lax: four rows on the board carry
+// no time at all — ערבית ליל החג, עת שערי רצון and מוסף — because they follow whatever came
+// before them and the shul posts no minute for them. Only a NON-EMPTY time has to look like a
+// time, which is exactly what the optional branch of validateItem below already does.
+//
+// `chazan` is the row's detail line and carries a different thing in each kind of row: the חזן
+// on a תפילה row, the מגיד שיעור on a שיעור, the גבאי on מכירת מצוות, and the location on
+// תשליך ("בבית משפחת רחמין"). Its admin label is "חזן / פרטים" for that reason.
+const ROSH_ROW_FIELDS = {
+  name: { required: true },
+  time: { required: false, pattern: TIME_RE, message: 'שעה חייבת להיות בפורמט 06:45' },
+  chazan: { required: false },
+  kind: { required: false, values: ROW_KINDS },
+};
+
 const PANELS = {
   announcements: {
     text: { required: true },
@@ -51,16 +93,36 @@ const PANELS = {
   //
   // `note` is optional: plenty of dedications end at the name, and the card drops the line
   // rather than leaving a gap when it is blank.
-  dedication: {
-    lead: { required: true },
-    names: { required: true },
-    note: { required: false },
-  },
+  dedication: DEDICATION_FIELDS,
   // The bottom ticker, one item per line. Modelled as a list rather than as one long
   // string so the gabbai never types the • separator himself, and so a single line can
   // be hidden without being deleted. The phone footer already renders a line per item;
   // the wall joins them back into one marquee.
   ticker: {
+    text: { required: true },
+  },
+  // ראש השנה, on /tv?screen=rosh. Two day panels rather than one list with a day column, for
+  // the reason shiurim/shiurimShabbat already settled: the gabbai edits "the יום ב׳ list", not
+  // "a row carrying a day flag" — and twenty-one rows in one phone-sized list is not a screen
+  // anyone can edit.
+  roshDay1: ROSH_ROW_FIELDS,
+  roshDay2: ROSH_ROW_FIELDS,
+  roshMechirot: {
+    label: { required: true },
+    // Stores day1/day2 only. The mockup's "· שבת" and "· ראשון" suffixes are composed at
+    // render from the Hebcal anchors, so the heading is right in תשפ״ח rather than frozen at
+    // the weekday תשפ״ז happened to fall on.
+    day: { required: false, values: MECHIRA_DAYS },
+    kind: { required: false, values: MECHIRA_KINDS },
+  },
+  // A חג dedication is bought separately from a שבת one — the board's own footer says so — so
+  // sharing one list would put the שבת dedicator's name on the חג board. Same three fields,
+  // shared by reference; separate lists.
+  roshDedication: DEDICATION_FIELDS,
+  // Its own ticker. The חול and שבת boards keep sharing `ticker` above: splitting that was not
+  // asked for and would either blank a live board or double every line into two lists to
+  // maintain. A חג board has no ticker yet, so it gets one.
+  roshTicker: {
     text: { required: true },
   },
 };
@@ -103,6 +165,14 @@ function validateItem(panel, body) {
     }
     if (rule.pattern && !rule.pattern.test(value)) {
       errors[key] = rule.message;
+      continue;
+    }
+    // A closed set of values, for the fields the admin renders as a <select>. Rejecting an
+    // unknown one matters more than it looks: the display falls back to a default for anything
+    // it does not recognise, so a typo'd kind would render as a plain row AND take the card
+    // that derives from it down with it, silently.
+    if (rule.values && !rule.values.includes(value)) {
+      errors[key] = 'ערך לא תקין';
       continue;
     }
     fields[key] = value;

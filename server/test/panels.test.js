@@ -3,7 +3,7 @@ const assert = require('node:assert');
 
 const { isPanel, validateItem, validateSettings, PANEL_KEYS } = require('../src/store/panels');
 
-test('recognises exactly the seven panels', () => {
+test('recognises exactly the twelve panels', () => {
   assert.deepStrictEqual(PANEL_KEYS, [
     'announcements',
     'shiurim',
@@ -12,8 +12,15 @@ test('recognises exactly the seven panels', () => {
     'azkarot',
     'dedication',
     'ticker',
+    'roshDay1',
+    'roshDay2',
+    'roshMechirot',
+    'roshDedication',
+    'roshTicker',
   ]);
   assert.strictEqual(isPanel('shiurim'), true);
+  assert.strictEqual(isPanel('roshDay1'), true);
+  assert.strictEqual(isPanel('roshMechirot'), true);
   assert.strictEqual(isPanel('shiurimShabbat'), true);
   assert.strictEqual(isPanel('dedication'), true);
   assert.strictEqual(isPanel('ticker'), true);
@@ -216,4 +223,75 @@ test('an image-only doc saves, even though its derived text is empty', () => {
 
   assert.strictEqual(errors, undefined);
   assert.strictEqual(fields.text, '');
+});
+
+// --- ראש השנה -------------------------------------------------------------------
+//
+// The two day panels are one schema mounted twice, like the two שיעורים panels above, and
+// they differ from every other panel in one way that matters: `time` is optional. Four rows
+// on the board carry no time at all — ערבית ליל החג, עת שערי רצון and מוסף — because they
+// follow whatever came before them and the shul posts no minute for them.
+
+test('a ראש השנה row may carry no time and no חזן', () => {
+  const { fields, errors } = validateItem('roshDay1', {
+    name: 'מוסף',
+    time: '',
+    chazan: '',
+    kind: 'regular',
+  });
+
+  assert.strictEqual(errors, undefined);
+  assert.deepStrictEqual(fields, { name: 'מוסף', time: '', chazan: '', kind: 'regular' });
+});
+
+test('a ראש השנה row still rejects a malformed time when one is given', () => {
+  assert.ok(validateItem('roshDay1', { name: 'שחרית', time: '25:00' }).errors.time);
+  assert.ok(validateItem('roshDay1', { name: 'שחרית', time: '7:30' }).errors.time);
+  assert.strictEqual(validateItem('roshDay1', { name: 'שחרית', time: '07:30' }).errors, undefined);
+});
+
+test('the two ראש השנה day panels validate identically', () => {
+  const item = { name: 'תקיעת שופר', time: '09:45', chazan: 'הבעל תוקע', kind: 'shofar' };
+
+  assert.deepStrictEqual(validateItem('roshDay2', item).fields, validateItem('roshDay1', item).fields);
+});
+
+// The row's kind is a stored field rather than a regex over its Hebrew name — see ROW_KINDS.
+// An unknown value has to be rejected, or the board would fall back to the plain treatment
+// and the שופר card would quietly lose the row it counts down to.
+test('a ראש השנה row rejects a kind outside the enum', () => {
+  assert.strictEqual(validateItem('roshDay2', { name: 'שחרית', kind: 'confetti' }).errors.kind, 'ערך לא תקין');
+});
+
+test('a blank kind is allowed and stored blank — the board reads it as regular', () => {
+  const { fields, errors } = validateItem('roshDay2', { name: 'שחרית', kind: '' });
+
+  assert.strictEqual(errors, undefined);
+  assert.strictEqual(fields.kind, '');
+});
+
+test('מכירת מצוות validates both of its enums', () => {
+  assert.ok(validateItem('roshMechirot', { label: 'פרנסה', day: 'day3' }).errors.day);
+  assert.ok(validateItem('roshMechirot', { label: 'פרנסה', kind: 'raffle' }).errors.kind);
+  assert.strictEqual(
+    validateItem('roshMechirot', { label: 'פרנסה', day: 'day1', kind: 'general' }).errors,
+    undefined
+  );
+});
+
+// A חג dedication is bought separately from a שבת one, so it is its own list — but it is the
+// same three fields, shared by reference on the server. A divergence could only be a bug.
+test('the חג dedication takes exactly the same fields as the שבת one', () => {
+  const item = { lead: 'מוקדש להצלחת', names: 'משפחת מזוז', note: 'בכל העניינים' };
+
+  assert.deepStrictEqual(validateItem('roshDedication', item).fields, validateItem('dedication', item).fields);
+  assert.deepStrictEqual(validateItem('roshDedication', { lead: '', names: '' }).errors, {
+    lead: 'שדה חובה',
+    names: 'שדה חובה',
+  });
+});
+
+test('the חג ticker takes one required line, like the shared one', () => {
+  assert.strictEqual(validateItem('roshTicker', { text: '  שנה טובה  ' }).fields.text, 'שנה טובה');
+  assert.ok(validateItem('roshTicker', { text: '' }).errors.text);
 });
