@@ -124,10 +124,10 @@ test('the שבת board\'s prayer split matches SHABBAT_PRAYERS', () => {
 
 // The companion check: EMPHASIS itself still recognizes the two rows that actually reach
 // PrayerListCard bolded — קבלת שבת (inside 'מנחה וקבלת שבת') and ערבית מוצ״ש — and still leaves
-// the two plain rows, שחרית and bare מנחה, unbolded.
+// the two plain rows, שחרית ומוסף and bare מנחה, unbolded.
 test('EMPHASIS bolds the שבת-acceptance and שבת-release rows, and nothing else', () => {
   assert.ok(EMPHASIS.test('מנחה וקבלת שבת'));
   assert.ok(EMPHASIS.test('ערבית מוצ״ש'));
-  assert.ok(!EMPHASIS.test('שחרית'));
+  assert.ok(!EMPHASIS.test('שחרית ומוסף'));
   assert.ok(!EMPHASIS.test('מנחה'));
 });

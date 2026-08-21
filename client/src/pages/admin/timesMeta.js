@@ -32,7 +32,7 @@ export const SETTINGS_META = {
     rows: [
       { key: 'candles', label: 'הדלקת נרות', auto: 'shabCandles' },
       { key: 'kabbalat', label: 'מנחה וקבלת שבת', auto: 'shabKabbalat' },
-      { key: 'shacharit', label: 'שחרית', auto: 'shabShacharit' },
+      { key: 'shacharit', label: 'שחרית ומוסף', auto: 'shabShacharit' },
       { key: 'mincha', label: 'מנחה', auto: 'shabMincha' },
       { key: 'arvit', label: 'ערבית מוצ״ש', auto: 'shabArvit' },
     ],

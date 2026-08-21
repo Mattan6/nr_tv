@@ -63,7 +63,7 @@ export const SHABBAT_CONFIG = {
 export const SHABBAT_PRAYERS = [
   { name: 'הדלקת נרות', computed: 'shabCandles', day: 5 },
   { name: 'מנחה וקבלת שבת', computed: 'shabKabbalat', day: 5 },
-  { name: 'שחרית', computed: 'shabShacharit', day: 6 },
+  { name: 'שחרית ומוסף', computed: 'shabShacharit', day: 6 },
   { name: 'מנחה', computed: 'shabMincha', day: 6 },
   { name: 'ערבית מוצ״ש', computed: 'shabArvit', day: 6 },
 ];
