@@ -57,12 +57,13 @@ export const SHABBAT_CONFIG = {
 // גדולה were dropped — both already appear in the זמנים panel — and שיעור בפרשה moved
 // to the שיעורים panel.
 //
-// Friday's ערבית is the sixth, and the one row with no time of its own: it is davened
-// straight off the end of קבלת שבת, so it borrows that row's clock through `afterName`
-// and shows text where the others show a number — the same shape the weekday ערבית has
-// always had. Giving it a computed time would mean inventing one, and an invented
-// minute on the wall is worse than the sentence that is actually true. It is also why
-// the admin form has five rows and not six: there is no time here to pin.
+// Friday's ערבית is the sixth, and the one row that posts nothing at all in the time
+// column — `text: ''`, which resolvePrayers passes through rather than falling back to
+// a clock or to '--:--' (see the `??` there). It is davened straight off the end of
+// קבלת שבת, and the row sitting directly under קבלת שבת is what says so; a sentence
+// spelling that out was tried on the wall and cut. An empty column here is a deliberate
+// blank, not a missing time, which is why it must not read '--:--'. It is also why the
+// admin form has five rows and not six: there is no time here to pin.
 //
 // `day` (0 = Sunday … 6 = Saturday) marks which day each row happens on. The list
 // spans two days, so without it computeNextMinyan would offer Friday's הדלקת נרות
@@ -70,7 +71,7 @@ export const SHABBAT_CONFIG = {
 export const SHABBAT_PRAYERS = [
   { name: 'הדלקת נרות', computed: 'shabCandles', day: 5 },
   { name: 'מנחה וקבלת שבת', computed: 'shabKabbalat', day: 5 },
-  { name: 'ערבית', text: 'מיד לאחר קבלת שבת', afterName: 'מנחה וקבלת שבת', day: 5 },
+  { name: 'ערבית', text: '', day: 5 },
   { name: 'שחרית ומוסף', computed: 'shabShacharit', day: 6 },
   { name: 'מנחה', computed: 'shabMincha', day: 6 },
   { name: 'ערבית מוצ״ש', computed: 'shabArvit', day: 6 },
@@ -268,6 +269,12 @@ export function isSummerTime(iso) {
 // 'HH:MM' used for ordering / countdown (null when there is no real time yet);
 // `day` passes each entry's weekday through to computeNextMinyan, undefined when
 // the list belongs to a single day.
+//
+// `text` is read with `??` and not with `||`, so `text: ''` survives to the screen as an
+// empty column. That is the שבת ערבית row, which deliberately posts nothing (see
+// SHABBAT_PRAYERS): under `||` an empty string would fall through to '--:--', turning a
+// row that has no time by design into one that looks like it lost its time to a failed
+// fetch — the one thing '--:--' is supposed to mean.
 export function resolvePrayers(entries, zmanimTimes, computed = {}) {
   const base = entries.map((e) => {
     let clock = null;
@@ -284,7 +291,7 @@ export function resolvePrayers(entries, zmanimTimes, computed = {}) {
       const ref = base.find((x) => x.name === e.afterName);
       clock = ref ? ref.clock : null;
     }
-    return { name: e.name, time: e.text || clock || '--:--', clock, day: e.day };
+    return { name: e.name, time: e.text ?? (clock || '--:--'), clock, day: e.day };
   });
 }
 

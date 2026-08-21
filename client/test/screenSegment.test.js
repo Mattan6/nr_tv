@@ -8,6 +8,7 @@ import {
   TZEIT_AFTER_SUNSET_MIN,
   toClock,
   SHABBAT_PRAYERS,
+  WEEKDAY_PRAYERS,
   resolvePrayers,
   computeNextMinyan,
 } from '../src/components/display/displayData.js';
@@ -123,22 +124,21 @@ test('the שבת board\'s prayer split matches SHABBAT_PRAYERS', () => {
   assert.equal(rows.filter((p) => p.day === 6).length, 3);
 });
 
-// Friday's ערבית has no time of its own: it shows text and borrows קבלת שבת's clock. Both
-// halves matter — the text is what the wall reads, and the borrowed clock is what keeps
-// computeNextMinyan from skipping Friday evening. `afterName` matches on the row's name, so
-// a rename of מנחה וקבלת שבת that missed this row would silently drop the clock to null.
-test('Friday ערבית shows text and inherits קבלת שבת\'s clock', () => {
+// Friday's ערבית posts an empty time column on purpose — the row under קבלת שבת is what says
+// when it is. Empty is one character away from the failure it must never be mistaken for: under
+// `||` rather than `??` in resolvePrayers, `text: ''` falls straight through to '--:--', which
+// on this board means a time that was supposed to arrive and didn't. Nothing about the rendered
+// row would look wrong, so nothing but this test would catch it.
+test('Friday ערבית posts an empty time, not --:--', () => {
   const rows = resolvePrayers(SHABBAT_PRAYERS, null, { shabKabbalat: '19:15' });
   const arvit = rows.find((p) => p.day === 5 && p.name === 'ערבית');
-  assert.equal(arvit.time, 'מיד לאחר קבלת שבת');
-  assert.equal(arvit.clock, '19:15');
+  assert.equal(arvit.time, '');
+  assert.equal(arvit.clock, null);
 });
 
-// The cost of that borrowed clock: ערבית is now a candidate for המניין הבא holding the same
-// minute as the row above it. It must never win — a card counting down to ערבית 19:15 while
-// קבלת שבת is the thing at 19:15 would send the hall in at the wrong name. It doesn't, because
-// computeNextMinyan takes the FIRST row later than now and ערבית sits after קבלת שבת in the
-// list. That is array order doing the work, so it is worth a test rather than a comment.
+// A row with no clock is not a candidate for המניין הבא — which is what keeps the card from
+// counting down to a ערבית it cannot name a minute for. Friday evening therefore runs
+// נרות → קבלת שבת and then rolls to Saturday morning, exactly as it did before the row existed.
 test('Friday ערבית never becomes המניין הבא', () => {
   const rows = resolvePrayers(SHABBAT_PRAYERS, null, {
     shabCandles: '19:00',
@@ -148,8 +148,17 @@ test('Friday ערבית never becomes המניין הבא', () => {
   const nameAt = (iso) => computeNextMinyan(at(iso), rows).name;
   assert.equal(nameAt('2026-08-21T18:00:00+03:00'), 'הדלקת נרות');
   assert.equal(nameAt('2026-08-21T19:05:00+03:00'), 'מנחה וקבלת שבת');
-  // Past קבלת שבת: Friday is spent, so it rolls to Saturday morning rather than to ערבית.
   assert.equal(nameAt('2026-08-21T19:20:00+03:00'), 'שחרית ומוסף');
+});
+
+// The weekday ערבית is the other side of the `??`: it carries real text, and that text must
+// still win over the clock it inherits from מנחה. Changing resolvePrayers for the שבת row
+// above must not quietly blank this one.
+test('the weekday ערבית still shows its text over the inherited clock', () => {
+  const rows = resolvePrayers(WEEKDAY_PRAYERS, null, { mincha: '19:20' });
+  const arvit = rows.find((p) => p.name === 'ערבית');
+  assert.equal(arvit.time, 'מיד לאחר מנחה');
+  assert.equal(arvit.clock, '19:20');
 });
 
 // The companion check: EMPHASIS itself still recognizes the two rows that actually reach
