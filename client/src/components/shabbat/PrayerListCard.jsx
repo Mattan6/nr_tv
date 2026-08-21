@@ -32,7 +32,7 @@ const PrayerListCard = ({ title, sub, rows }) => (
     </div>
 
     {/* grid-auto-rows:1fr spreads however many rows there are over the card's height, so the
-        one-row ערב שבת card and the three-row יום השבת card both fill their box. */}
+        two-row ערב שבת card and the three-row יום השבת card both fill their box. */}
     <div style={{ display: 'grid', gridAutoRows: '1fr', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       {rows.map((p) => {
         const strong = EMPHASIS.test(p.name);

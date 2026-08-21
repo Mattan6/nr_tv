@@ -36,9 +36,9 @@ const ShabbatDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
   // The שבת list spans two days and each row is already tagged with the day it happens on —
   // `day` exists because computeNextMinyan needs it, and the two cards get it for free.
   //
-  // הדלקת נרות is filtered out of ערב שבת because it has its own card above. That leaves one
-  // row there, which is the layout the design calls for: a duplicated time and an over-full
-  // card are both worse than a card with room in it.
+  // הדלקת נרות is filtered out of ערב שבת because it has its own card above. That leaves the
+  // two rows the evening actually has — מנחה וקבלת שבת and the ערבית that follows it — rather
+  // than a third row repeating the candle time the card above already carries in full size.
   const erev = prayers.filter((p) => p.day === 5 && p.name !== 'הדלקת נרות');
   const yom = prayers.filter((p) => p.day === 6);
 
@@ -100,7 +100,7 @@ const ShabbatDisplay = ({ safeArea = { x: 0, y: 0 } }) => {
 
             <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1.1fr 1.1fr 1fr', gap: '20px', minHeight: 0, paddingBottom: '4px' }}>
               <div style={{ display: 'grid', gridTemplateRows: '0.8fr 1.2fr', gap: '20px', minHeight: 0 }}>
-                <PrayerListCard title="עֶרֶב שַׁבָּת" sub="יום שישי · קבלת שבת" rows={erev} />
+                <PrayerListCard title="עֶרֶב שַׁבָּת" sub="יום שישי · קבלת שבת · ערבית" rows={erev} />
                 <PrayerListCard title="יוֹם הַשַּׁבָּת" sub="שחרית · מנחה · ערבית" rows={yom} />
               </div>
 

@@ -9,6 +9,7 @@ import {
   toClock,
   SHABBAT_PRAYERS,
   resolvePrayers,
+  computeNextMinyan,
 } from '../src/components/display/displayData.js';
 import { EMPHASIS } from '../src/components/shabbat/prayerEmphasis.js';
 
@@ -114,12 +115,41 @@ test('a missing anchor is null, never a stale or invented time', () => {
 // PrayerListCard.jsx's EMPHASIS regex hand-copies three more of its names (including the
 // U+05F4 gershayim in 'מוצ״ש'). Neither literal is derived from SHABBAT_PRAYERS, so a rename
 // there would silently break one or both without either side failing to compile. This pins
-// today's split — one row in ערב שבת once הדלקת נרות is pulled out, three in יום השבת — so a
-// future rename of any of these five names is caught here instead of on the wall.
+// today's split — two rows in ערב שבת once הדלקת נרות is pulled out, three in יום השבת — so a
+// future rename of any of these six names is caught here instead of on the wall.
 test('the שבת board\'s prayer split matches SHABBAT_PRAYERS', () => {
   const rows = resolvePrayers(SHABBAT_PRAYERS, null, {});
-  assert.equal(rows.filter((p) => p.day === 5 && p.name !== 'הדלקת נרות').length, 1);
+  assert.equal(rows.filter((p) => p.day === 5 && p.name !== 'הדלקת נרות').length, 2);
   assert.equal(rows.filter((p) => p.day === 6).length, 3);
+});
+
+// Friday's ערבית has no time of its own: it shows text and borrows קבלת שבת's clock. Both
+// halves matter — the text is what the wall reads, and the borrowed clock is what keeps
+// computeNextMinyan from skipping Friday evening. `afterName` matches on the row's name, so
+// a rename of מנחה וקבלת שבת that missed this row would silently drop the clock to null.
+test('Friday ערבית shows text and inherits קבלת שבת\'s clock', () => {
+  const rows = resolvePrayers(SHABBAT_PRAYERS, null, { shabKabbalat: '19:15' });
+  const arvit = rows.find((p) => p.day === 5 && p.name === 'ערבית');
+  assert.equal(arvit.time, 'מיד לאחר קבלת שבת');
+  assert.equal(arvit.clock, '19:15');
+});
+
+// The cost of that borrowed clock: ערבית is now a candidate for המניין הבא holding the same
+// minute as the row above it. It must never win — a card counting down to ערבית 19:15 while
+// קבלת שבת is the thing at 19:15 would send the hall in at the wrong name. It doesn't, because
+// computeNextMinyan takes the FIRST row later than now and ערבית sits after קבלת שבת in the
+// list. That is array order doing the work, so it is worth a test rather than a comment.
+test('Friday ערבית never becomes המניין הבא', () => {
+  const rows = resolvePrayers(SHABBAT_PRAYERS, null, {
+    shabCandles: '19:00',
+    shabKabbalat: '19:15',
+    shabShacharit: '07:45',
+  });
+  const nameAt = (iso) => computeNextMinyan(at(iso), rows).name;
+  assert.equal(nameAt('2026-08-21T18:00:00+03:00'), 'הדלקת נרות');
+  assert.equal(nameAt('2026-08-21T19:05:00+03:00'), 'מנחה וקבלת שבת');
+  // Past קבלת שבת: Friday is spent, so it rolls to Saturday morning rather than to ערבית.
+  assert.equal(nameAt('2026-08-21T19:20:00+03:00'), 'שחרית ומוסף');
 });
 
 // The companion check: EMPHASIS itself still recognizes the two rows that actually reach
